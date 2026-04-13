@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#011627">
+    <title>Tiny Pond: Fleet Manager</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="data:application/manifest+json,{'name':'Tiny Pond','short_name':'TinyPond','start_url':'.','display':'standalone','background_color':'#011627','theme_color':'#011627'}">
+
+    <style>
+        :root {
+            --deep-water: #011627;
+            --gold: #ffb703;
+            --brass: #e09f3e;
+            --royal-red: #9e2a2b;
+            --alert-red: #ff002b;
+            --teal: #2a9d8f;
+            --slate: #457b9d;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: #011627;
+            font-family: 'Trebuchet MS', sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, #00b4d8 0%, #011627 100%);
+        }
+
+        canvas { display: block; touch-action: none; }
+
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Home Screen Styles */
+        #home-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #00b4d8 0%, #011627 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: auto;
+            transition: opacity 0.5s ease;
+        }
+
+        .game-title {
+            font-size: 4rem;
+            color: var(--gold);
+            text-shadow: 0 0 20px rgba(255, 183, 3, 0.5), 4px 4px 0px #000;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            font-weight: 900;
+        }
+
+        .game-subtitle {
+            color: #fff;
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            letter-spacing: 4px;
+            opacity: 0.8;
+        }
+
+        .start-btn {
+            padding: 20px 60px;
+            font-size: 1.5rem;
+            background: var(--gold);
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #b07d00, 0 20px 30px rgba(0,0,0,0.4);
+            transition: transform 0.1s;
+        }
+
+        .start-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 5px 0 #b07d00, 0 10px 20px rgba(0,0,0,0.4);
+        }
+
+        .stat-pill {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 10px 18px;
+            border-radius: 25px;
+            border: 2.5px solid var(--brass);
+            color: white;
+            font-weight: bold;
+            display: flex; align-items: center; gap: 8px;
+            pointer-events: auto;
+        }
+
+        #top-bar {
+            position: absolute;
+            top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .modal {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1d3557;
+            color: #f1faee;
+            width: 360px;
+            padding: 20px;
+            border-radius: 25px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            border: 5px solid var(--brass);
+            pointer-events: auto;
+            box-shadow: 0 0 0 5000px rgba(0,0,0,0.85);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .tab-row { display: flex; gap: 5px; margin-bottom: 10px; }
+        .tab-btn { flex: 1; padding: 8px; background: #457b9d; border-radius: 10px; font-size: 12px; text-align: center; cursor: pointer; font-weight: bold; }
+        .tab-btn.active { background: var(--gold); color: black; }
+
+        .item-row { background: #457b9d; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; cursor: pointer; }
+        .item-row.evolve-btn { background: linear-gradient(45deg, var(--gold), #ff8c00); color: black; font-weight: bold; }
+        .item-row.upgrade-btn { background: #2a9d8f; color: white; }
+
+        .garage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .car-card { background: #111; padding: 10px; border-radius: 10px; border: 2px solid #444; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; text-align: center; }
+        .car-card.active { border-color: var(--gold); background: #222; }
+
+        .btn { padding: 12px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; text-align: center; text-transform: uppercase; }
+        .btn-red { background: #e63946; color: white; }
+        .btn-gold { background: var(--gold); color: black; }
+
+        #action-buttons {
+            position: absolute;
+            bottom: 30px; right: 30px;
+            display: flex; flex-direction: column; gap: 15px;
+            pointer-events: auto;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .circle-btn { width: 70px; height: 70px; border-radius: 22px; border: 4px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+
+        #sonar-warning {
+            position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
+            background: var(--alert-red); color: white; padding: 10px 25px; border-radius: 50px; font-weight: bold; display: none; box-shadow: 0 0 20px rgba(255, 0, 43, 0.5); z-index: 1000;
+        }
+
+        /* Floating Animation for Title */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+        .float-anim { animation: float 4s ease-in-out infinite; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="home-screen">
+        <div class="float-anim" style="text-align: center;">
+            <div class="game-title">TINY POND</div>
+            <div class="game-subtitle">FLEET MANAGER</div>
+        </div>
+        <button class="start-btn" onclick="startGame()">START MISSION</button>
+        <p style="color:white; margin-top:40px; opacity: 0.5; font-size: 0.8rem;">V 1.2 - PWA ENABLED</p>
+    </div>
+
+    <div id="ui-layer">
+        <div id="sonar-warning">📡 SONAR: NIBBLER DETECTED!</div>
+
+        <div id="top-bar">
+            <div style="display:flex; gap:10px;">
+                <div class="stat-pill">💰 <span id="gold-val">100</span></div>
+                <div class="stat-pill">🚃 <span id="fleet-count">4</span>/10</div>
+            </div>
+            <div class="stat-pill">⚙️ <span id="health-val">100</span>%</div>
+        </div>
+
+        <div id="action-buttons">
+            <div class="circle-btn" style="background:var(--gold)" onclick="openModal('shop')">🛒</div>
+            <div class="circle-btn" style="background:var(--teal)" onclick="openModal('garage')">📦</div>
+        </div>
+
+        <div id="shop-modal" class="modal">
+            <h2 style="margin:0; text-align:center; color:var(--gold)">ENGINEERING BAY</h2>
+            <div id="shop-list"></div>
+            <div class="btn btn-red" onclick="closeModals()">Back to Water</div>
+        </div>
+
+        <div id="garage-modal" class="modal">
+            <h2 style="margin:0; text-align:center; color:var(--teal)">FLEET MANAGER</h2>
+            <div class="tab-row">
+                <div class="tab-btn active" id="tab-engines" onclick="setGarageTab('engines')">Engines</div>
+                <div class="tab-btn" id="tab-cars" onclick="setGarageTab('cars')">Cars</div>
+                <div class="tab-btn" id="tab-cabooses" onclick="setGarageTab('cabooses')">Cabooses</div>
+            </div>
+            <div id="garage-list" class="garage-grid"></div>
+            <div class="btn btn-red" style="margin-top:10px;" onclick="closeModals()">Close</div>
+        </div>
+
+        <div id="catch-modal" class="modal">
+            <h3 style="text-align:center; color:var(--gold); margin:0">NIBBLER CAUGHT! 🐡</h3>
+            <p style="text-align:center">Machinery restored!</p>
+            <div class="btn btn-gold" onclick="handleCatch()">Repair Machinery (+40%)</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let gold = 100;
+    let health = 100;
+    let engineSpeed = 2.5;
+    let garageTab = 'cars';
+    let gameState = 'START_SCREEN';
+
+    let inventory = {
+        engines: [{ id: 'e1', name: 'Classic Red', color: '#9e2a2b', active: true, level: 1 }],
+        cars: [
+            { id: 'c1', name: 'Sapphire', color: '#005f73', level: 1, active: true },
+            { id: 'c2', name: 'Amethyst', color: '#9b5de5', level: 1, active: true },
+            { id: 'c3', name: 'Topaz', color: '#00b4d8', level: 1, active: true },
+            { id: 'c4', name: 'Emerald', color: '#2a9d8f', level: 1, active: true }
+        ],
+        cabooses: [{ id: 'b1', name: 'Old Rusty', color: '#5e503f', active: true, level: 1 }]
+    };
+
+    const shopCatalog = {
+        engines: [
+            { name: 'Deep Sea', color: '#001233', price: 250 },
+            { name: 'Gold Rush', color: '#ffb703', price: 500 },
+            { name: 'Neon Reef', color: '#39ff14', price: 400 },
+            { name: 'Abyss Hunter', color: '#240046', price: 600 }
+        ],
+        cabooses: [
+            { name: 'Royal Guard', color: '#6a040f', price: 150 },
+            { name: 'Crystal End', color: '#ade8f4', price: 300 },
+            { name: 'Bio-Flare', color: '#ff006e', price: 200 },
+            { name: 'Sunken Vault', color: '#6d6875', price: 350 }
+        ]
+    };
+
+    let width, height, trainY, targetY;
+    let stations = [];
+    let blowfish = { x: -5000, y: 0, active: false, attached: false, cooldown: 300, pulse: 0 };
+    let bgProps = { mountains: [], bubbles: [] };
+    let cameraScale = 1.0, cameraX = 0;
+
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        trainY = height / 2;
+        targetY = height / 2;
+    }
+
+    function startGame() {
+        document.getElementById('home-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('home-screen').style.display = 'none';
+            document.getElementById('top-bar').style.opacity = '1';
+            document.getElementById('action-buttons').style.opacity = '1';
+            gameState = 'PLAYING';
+        }, 500);
+    }
+
+    function init() {
+        window.addEventListener('resize', resize);
+        resize();
+        for(let i=0; i<15; i++) bgProps.mountains.push({ x: Math.random()*8000-2000, w: 600+Math.random()*800, h: 200+Math.random()*500, c: `rgba(1, 42, 74, ${0.1+Math.random()*0.1})` });
+        for(let i=0; i<60; i++) bgProps.bubbles.push({ x: Math.random()*width*5, y: Math.random()*height, s: Math.random()*1+0.5, r: Math.random()*2.5+1 });
+        updateUI();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Modal and Shop logic remained unchanged per request
+    function openModal(id) {
+        if (gameState === 'CATCH') return;
+        closeModals();
+        const oldState = gameState;
+        gameState = 'PAUSED';
+        document.getElementById(id + '-modal').style.display = 'flex';
+        if (id === 'shop') populateShop();
+        if (id === 'garage') populateGarage();
+    }
+
+    function closeModals() {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        gameState = 'PLAYING';
+    }
+
+    function populateShop() {
+        const list = document.getElementById('shop-list');
+        list.innerHTML = '';
+        const speedRow = document.createElement('div');
+        speedRow.className = 'item-row upgrade-btn';
+        speedRow.innerHTML = `<div><b>Increase Speed</b><br><small>Current: ${engineSpeed.toFixed(1)}</small></div><span>💰 250</span>`;
+        speedRow.onclick = () => { if (gold >= 250) { gold -= 250; engineSpeed += 0.5; populateShop(); updateUI(); } };
+        list.appendChild(speedRow);
+
+        ['engines', 'cabooses'].forEach(type => {
+            shopCatalog[type].forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'item-row';
+                row.innerHTML = `<div><b>${item.name}</b><br><small>${type.slice(0, -1)}</small></div><span>💰 ${item.price}</span>`;
+                row.onclick = () => buyItem(type, item);
+                list.appendChild(row);
+            });
+        });
+
+        const carRow = document.createElement('div');
+        carRow.className = 'item-row';
+        carRow.innerHTML = `<div><b>New Random Car</b></div><span>💰 150</span>`;
+        carRow.onclick = () => buyItem('cars', { name: 'Random', price: 150 });
+        list.appendChild(carRow);
+
+        ['engines', 'cars', 'cabooses'].forEach(type => {
+            const counts = {};
+            inventory[type].forEach(item => { if (item.level === 1) counts[item.name] = (counts[item.name] || 0) + 1; });
+            Object.keys(counts).forEach(name => {
+                if (counts[name] >= 2) {
+                    const mergeRow = document.createElement('div');
+                    mergeRow.className = 'item-row evolve-btn';
+                    mergeRow.innerHTML = `<div><b>FUSE 2x ${name}</b><br><small>Crystal Evolution</small></div><span>💰 100</span>`;
+                    mergeRow.onclick = () => fuseItems(type, name);
+                    list.appendChild(mergeRow);
+                }
+            });
+        });
+    }
+
+    function fuseItems(type, name) {
+        if (gold >= 100) {
+            gold -= 100;
+            let removed = 0;
+            const original = inventory[type].find(i => i.name === name);
+            inventory[type] = inventory[type].filter(i => {
+                if (i.name === name && i.level === 1 && removed < 2) { removed++; return false; }
+                return true;
+            });
+            inventory[type].push({ id: 'crystal-' + Date.now(), name: name, color: original.color, level: 2, active: false });
+            populateShop(); updateUI();
+        }
+    }
+
+    function buyItem(type, item) {
+        if (gold >= item.price) {
+            gold -= item.price;
+            let newItem = { id: Date.now().toString(), active: false, level: 1 };
+            if (type === 'cars') {
+                const styles = ['Sapphire', 'Amethyst', 'Topaz', 'Emerald', 'Ruby', 'Amber'];
+                const colors = ['#005f73', '#9b5de5', '#00b4d8', '#2a9d8f', '#e63946', '#ff9f1c'];
+                const idx = Math.floor(Math.random()*styles.length);
+                newItem = { ...newItem, name: styles[idx], color: colors[idx] };
+            } else { newItem = { ...newItem, name: item.name, color: item.color }; }
+            inventory[type].push(newItem); updateUI(); populateShop();
+        }
+    }
+
+    function setGarageTab(tab) {
+        garageTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        populateGarage();
+    }
+
+    function populateGarage() {
+        const list = document.getElementById('garage-list');
+        list.innerHTML = '';
+        inventory[garageTab].forEach(item => {
+            const card = document.createElement('div');
+            card.className = `car-card ${item.active ? 'active' : ''}`;
+            let icon = garageTab === 'engines' ? '🚂' : (garageTab === 'cabooses' ? '🏠' : '🚃');
+            if (item.level === 2) icon = '💎';
+            card.innerHTML = `<div style="font-size:24px; color:${item.color}">${icon}</div><div style="font-size:10px">${item.name}</div>`;
+            card.onclick = () => {
+                if (garageTab === 'cars') {
+                    const activeCount = inventory.cars.filter(c => c.active).length;
+                    if (item.active) item.active = false;
+                    else if (activeCount < 10) item.active = true;
+                } else {
+                    inventory[garageTab].forEach(i => i.active = false);
+                    item.active = true;
+                }
+                populateGarage(); updateUI();
+            };
+            list.appendChild(card);
+        });
+    }
+
+    function handleCatch() { health = Math.min(100, health + 40); blowfish.active = false; blowfish.attached = false; blowfish.cooldown = 1000; closeModals(); }
+    function updateUI() { document.getElementById('gold-val').innerText = Math.floor(gold); document.getElementById('health-val').innerText = Math.floor(health); document.getElementById('fleet-count').innerText = inventory.cars.filter(c => c.active).length; }
+
+    canvas.addEventListener('pointerdown', (e) => {
+        if (gameState !== 'PLAYING') return;
+        const rect = canvas.getBoundingClientRect();
+        const touchX = (e.clientX - rect.left) / cameraScale - cameraX;
+        const touchY = (e.clientY - rect.top) / cameraScale;
+        if (blowfish.active) {
+            const dx = touchX - blowfish.x; const dy = touchY - blowfish.y;
+            if (Math.sqrt(dx*dx + dy*dy) < 80) { gameState = 'CATCH'; document.getElementById('catch-modal').style.display = 'flex'; return; }
+        }
+        targetY = e.clientY;
+    });
+
+    function drawPart(x, y, item, type) {
+        ctx.save(); ctx.translate(x, y); ctx.fillStyle = item.color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        const hOffset = item.level === 2 ? -10 : 0; const extraH = item.level === 2 ? 15 : 0;
+        if (item.level === 2) { ctx.shadowBlur = 15; ctx.shadowColor = '#fff'; }
+        if (type === 'engine') {
+            ctx.beginPath(); ctx.roundRect(0, -35 + hOffset, 110, 65 + extraH, 12); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(110, 0); ctx.lineTo(135, 25); ctx.lineTo(110, 25); ctx.fill();
+            ctx.fillStyle = '#333'; ctx.fillRect(80, -55 + hOffset, 20, 30);
+        } else if (type === 'car') {
+            const h = item.level === 2 ? 65 : 50; const yO = item.level === 2 ? -40 : -25;
+            ctx.beginPath(); ctx.roundRect(0, yO, 80, h, 8); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#caf0f8'; for(let i=0; i<(item.level === 2 ? 4 : 2); i++) ctx.fillRect(10 + (i%2)*35, yO + 10 + Math.floor(i/2)*25, 25, 15);
+        } else {
+            ctx.beginPath(); ctx.moveTo(0, 25); ctx.lineTo(40, -45 + hOffset); ctx.lineTo(80, 25); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.roundRect(10, -15 + hOffset, 60, 40 + extraH, 5); ctx.fill(); ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    function drawStation(s) {
+        ctx.save(); ctx.translate(s.x, trainY - 100); ctx.fillStyle = '#457b9d'; ctx.strokeStyle = '#a8dadc'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.roundRect(0, 0, 160, 60, 15); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#f1faee'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("PICKUP", 80, 35);
+        ctx.restore();
+    }
+
+    function drawNibbler() {
+        if (!blowfish.active) return;
+        ctx.save(); ctx.translate(blowfish.x, blowfish.y);
+        const s = 1.2 + Math.sin(blowfish.pulse) * 0.2; ctx.scale(s, s);
+        ctx.shadowBlur = 30; ctx.shadowColor = '#ff5500'; ctx.fillStyle = '#ff6b35';
+        ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.restore();
+    }
+
+    function update() {
+        if (gameState !== 'PLAYING' && gameState !== 'START_SCREEN') return;
+        
+        // Slower drift speed for the start screen
+        let speed = gameState === 'START_SCREEN' ? 0.5 : engineSpeed;
+        if (blowfish.attached) speed *= 0.35;
+        
+        trainY += (targetY - trainY) * 0.05;
+        const activeCars = inventory.cars.filter(c => c.active);
+        const trainLen = 110 + (activeCars.length * 85) + 85;
+        const targetScale = Math.min(1.0, width / (trainLen + 400));
+        cameraScale += (targetScale - cameraScale) * 0.05;
+        cameraX += ((width/cameraScale)*0.85 - trainLen - cameraX) * 0.05;
+
+        bgProps.mountains.forEach(m => m.x -= speed * 0.8);
+        bgProps.bubbles.forEach(b => {
+            b.y -= b.s; b.x -= speed * 5;
+            if (b.y < -20) b.y = height + 20;
+            if (b.x < -1000) b.x = width/cameraScale + 1000;
+        });
+
+        if (gameState === 'START_SCREEN') return;
+
+        const sonarEl = document.getElementById('sonar-warning');
+        if (blowfish.active && !blowfish.attached) {
+            const screenX = (blowfish.x + cameraX) * cameraScale;
+            sonarEl.style.display = screenX > width ? 'block' : 'none';
+        } else sonarEl.style.display = 'none';
+
+        if (blowfish.active) {
+            blowfish.pulse += 0.15;
+            if (!blowfish.attached) {
+                blowfish.x -= (speed + 2.0); blowfish.y += (trainY - 40 - blowfish.y) * 0.03;
+                const engineX = (activeCars.length + 1) * 85;
+                if (Math.abs(blowfish.x - engineX) < 50) blowfish.attached = true;
+                if (blowfish.x < -2000) { blowfish.active = false; blowfish.cooldown = 500; }
+            } else {
+                const engineX = (activeCars.length + 1) * 85;
+                blowfish.x = engineX + 60; blowfish.y = trainY - 30;
+                health -= 0.15; if (health <= 0) health = 0;
+            }
+        } else if (blowfish.cooldown > 0) blowfish.cooldown--;
+        else if (Math.random() < 0.004) { blowfish.active = true; blowfish.x = (activeCars.length + 5) * 200 + 2000; blowfish.y = trainY; blowfish.attached = false; }
+
+        if (Math.random() < 0.005) stations.push({ x: width/cameraScale + 2000, collected: false });
+        stations.forEach(s => {
+            s.x -= speed * 5; const engineX = (activeCars.length + 1) * 85;
+            if (!s.collected && Math.abs(s.x - engineX) < 150) { s.collected = true; gold += 15 + (activeCars.length * 5); updateUI(); }
+        });
+        stations = stations.filter(s => s.x > -2000);
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, width, height);
+        ctx.save(); ctx.scale(cameraScale, cameraScale); ctx.translate(cameraX, 0);
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 14;
+        ctx.beginPath(); ctx.moveTo(-10000, trainY + 36); ctx.lineTo(10000, trainY + 36); ctx.stroke();
+        const activeCars = inventory.cars.filter(c => c.active);
+        const engine = inventory.engines.find(e => e.active);
+        const caboose = inventory.cabooses.find(b => b.active);
+        stations.forEach(drawStation);
+        if (caboose) drawPart(0, trainY, caboose, 'caboose');
+        activeCars.forEach((car, i) => drawPart((i + 1) * 85, trainY, car, 'car'));
+        if (engine) drawPart((activeCars.length + 1) * 85, trainY, engine, 'engine');
+        if (gameState !== 'START_SCREEN') drawNibbler();
+        ctx.restore();
+        update(); requestAnimationFrame(gameLoop);
+    }
+
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            const swCode = `self.addEventListener('fetch', function(event) {});`;
+            const blob = new Blob([swCode], {type: 'text/javascript'});
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(err => console.log('SW registration failed:', err));
+        });
+    }
+
+    init();
+</script>
+</body>
+</html>
