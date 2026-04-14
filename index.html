@@ -1,232 +1,184 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#011627">
-    <title>Tiny Pond: Fleet Manager</title>
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="data:application/manifest+json,{'name':'Tiny Pond','short_name':'TinyPond','start_url':'.','display':'standalone','background_color':'#011627','theme_color':'#011627'}">
-
+    <title>Submarine Train</title>
     <style>
         :root {
-            --deep-water: #011627;
+            --water: #00b4d8;
+            --deep: #011627;
             --gold: #ffb703;
             --brass: #e09f3e;
-            --royal-red: #9e2a2b;
-            --alert-red: #ff002b;
-            --teal: #2a9d8f;
-            --slate: #457b9d;
+            --punch: #ef476f;
+            --ruby: #9b2226;
+            --ui-bg: rgba(1, 22, 39, 0.95);
         }
 
         body, html {
             margin: 0; padding: 0;
             width: 100%; height: 100%;
             overflow: hidden;
-            background-color: #011627;
+            background-color: var(--deep);
             font-family: 'Trebuchet MS', sans-serif;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
         }
 
-        #game-container {
-            position: relative;
-            width: 100vw; height: 100vh;
-            background: linear-gradient(to bottom, #00b4d8 0%, #011627 100%);
+        #game-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+        canvas { display: block; touch-action: none; background: linear-gradient(to bottom, #00b4d8, #0077b6, #023e8a); }
+
+        /* Start Screen */
+        #start-screen {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at center, #0077b6 0%, #011627 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 2000; color: white; text-align: center;
         }
 
-        canvas { display: block; touch-action: none; }
-
-        #ui-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        /* Home Screen Styles */
-        #home-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #00b4d8 0%, #011627 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            pointer-events: auto;
-            transition: opacity 0.5s ease;
-        }
-
-        .game-title {
-            font-size: 4rem;
-            color: var(--gold);
-            text-shadow: 0 0 20px rgba(255, 183, 3, 0.5), 4px 4px 0px #000;
-            margin-bottom: 0.5rem;
-            text-align: center;
-            font-weight: 900;
-        }
-
-        .game-subtitle {
-            color: #fff;
-            font-size: 1.2rem;
-            margin-bottom: 3rem;
-            letter-spacing: 4px;
-            opacity: 0.8;
+        .start-title {
+            font-size: 3.5rem; color: var(--gold); text-shadow: 0 0 20px rgba(255,183,3,0.5);
+            margin-bottom: 10px; font-weight: 900; letter-spacing: -2px;
         }
 
         .start-btn {
-            padding: 20px 60px;
-            font-size: 1.5rem;
-            background: var(--gold);
-            border: none;
-            border-radius: 50px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 10px 0 #b07d00, 0 20px 30px rgba(0,0,0,0.4);
-            transition: transform 0.1s;
+            background: var(--gold); color: #333; border: none; padding: 18px 45px;
+            font-size: 1.5rem; font-weight: bold; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 8px 0 #cc9200; transition: transform 0.1s;
+        }
+        .start-btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #cc9200; }
+
+        .hud {
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; pointer-events: none; z-index: 100;
         }
 
-        .start-btn:active {
-            transform: translateY(5px);
-            box-shadow: 0 5px 0 #b07d00, 0 10px 20px rgba(0,0,0,0.4);
+        .pill {
+            background: var(--ui-bg); border: 2px solid var(--brass);
+            padding: 8px 15px; border-radius: 20px; color: white;
+            font-weight: bold; display: flex; align-items: center; gap: 8px;
+            pointer-events: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        .stat-pill {
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
-            padding: 10px 18px;
-            border-radius: 25px;
-            border: 2.5px solid var(--brass);
-            color: white;
-            font-weight: bold;
-            display: flex; align-items: center; gap: 8px;
-            pointer-events: auto;
+        .controls {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; pointer-events: auto; z-index: 100;
         }
 
-        #top-bar {
-            position: absolute;
-            top: 20px; left: 20px; right: 20px;
-            display: flex; justify-content: space-between;
-            opacity: 0;
-            transition: opacity 0.5s;
+        .btn-circle {
+            width: 65px; height: 65px; background: var(--gold);
+            border: 4px solid white; border-radius: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: 0 5px 0 #cc9200;
+            font-size: 24px; transition: transform 0.1s;
         }
+        .btn-circle:active { transform: translateY(3px); box-shadow: 0 2px 0 #cc9200; }
+        .btn-circle span { font-size: 9px; font-weight: bold; color: #333; margin-top: 2px; }
 
         .modal {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: #1d3557;
-            color: #f1faee;
-            width: 360px;
-            padding: 20px;
-            border-radius: 25px;
-            display: none;
-            flex-direction: column;
-            gap: 12px;
-            border: 5px solid var(--brass);
-            pointer-events: auto;
-            box-shadow: 0 0 0 5000px rgba(0,0,0,0.85);
-            max-height: 85vh;
-            overflow-y: auto;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #1d3557; border: 4px solid var(--brass); width: 92%; max-width: 480px;
+            padding: 20px; border-radius: 25px; display: none; flex-direction: column;
+            pointer-events: auto; z-index: 1000; color: white;
         }
 
-        .tab-row { display: flex; gap: 5px; margin-bottom: 10px; }
-        .tab-btn { flex: 1; padding: 8px; background: #457b9d; border-radius: 10px; font-size: 12px; text-align: center; cursor: pointer; font-weight: bold; }
-        .tab-btn.active { background: var(--gold); color: black; }
-
-        .item-row { background: #457b9d; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; cursor: pointer; }
-        .item-row.evolve-btn { background: linear-gradient(45deg, var(--gold), #ff8c00); color: black; font-weight: bold; }
-        .item-row.upgrade-btn { background: #2a9d8f; color: white; }
-
-        .garage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .car-card { background: #111; padding: 10px; border-radius: 10px; border: 2px solid #444; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; text-align: center; }
-        .car-card.active { border-color: var(--gold); background: #222; }
-
-        .btn { padding: 12px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; text-align: center; text-transform: uppercase; }
-        .btn-red { background: #e63946; color: white; }
-        .btn-gold { background: var(--gold); color: black; }
-
-        #action-buttons {
-            position: absolute;
-            bottom: 30px; right: 30px;
-            display: flex; flex-direction: column; gap: 15px;
-            pointer-events: auto;
-            opacity: 0;
-            transition: opacity 0.5s;
+        /* Success Toast */
+        #toast {
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+            background: #06d6a0; color: #011627; padding: 10px 25px; border-radius: 30px;
+            font-weight: bold; font-size: 14px; opacity: 0; transition: opacity 0.3s;
+            z-index: 3000; pointer-events: none; border: 2px solid white;
         }
 
-        .circle-btn { width: 70px; height: 70px; border-radius: 22px; border: 4px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
-
-        #sonar-warning {
-            position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
-            background: var(--alert-red); color: white; padding: 10px 25px; border-radius: 50px; font-weight: bold; display: none; box-shadow: 0 0 20px rgba(255, 0, 43, 0.5); z-index: 1000;
+        .scroll-list { max-height: 40vh; overflow-y: auto; margin: 15px 0; }
+        .item-row {
+            background: rgba(255,255,255,0.1); border-radius: 12px; padding: 12px;
+            margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
         }
 
-        /* Floating Animation for Title */
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-            100% { transform: translateY(0px); }
+        .yard-section { margin-bottom: 15px; }
+        .yard-label { font-size: 10px; font-weight: bold; text-transform: uppercase; color: var(--gold); margin-bottom: 5px; opacity: 0.8; }
+
+        .merge-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+            background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px;
         }
-        .float-anim { animation: float 4s ease-in-out infinite; }
+        
+        .slot {
+            aspect-ratio: 1; background: rgba(255,255,255,0.05); border-radius: 10px;
+            border: 2px dashed rgba(255,255,255,0.2); display: flex; align-items: center;
+            justify-content: center; font-size: 24px; position: relative;
+        }
+        .slot.filled { background: rgba(255,255,255,0.1); border-style: solid; border-color: rgba(255,255,255,0.1); }
+        .slot.selected { border-color: var(--gold); background: rgba(255, 183, 3, 0.35); box-shadow: 0 0 10px var(--gold); }
+        
+        .status-dot { position: absolute; top: 4px; right: 4px; width: 10px; height: 10px; border-radius: 50%; background: #333; border: 1px solid rgba(255,255,255,0.2); }
+        .status-dot.on { background: #06d6a0; box-shadow: 0 0 8px #06d6a0; }
+
+        .lvl-tag { position: absolute; bottom: 2px; left: 2px; font-size: 8px; background: var(--brass); color: black; padding: 1px 4px; border-radius: 3px; font-weight: bold; border: 1px solid rgba(0,0,0,0.2); }
+        
+        .controls-small { display: flex; gap: 5px; margin-top: 10px; }
+        .btn-small { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: filter 0.2s; }
+        .btn-small:active { filter: brightness(0.8); }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <canvas id="gameCanvas"></canvas>
-    
-    <div id="home-screen">
-        <div class="float-anim" style="text-align: center;">
-            <div class="game-title">TINY POND</div>
-            <div class="game-subtitle">FLEET MANAGER</div>
-        </div>
+    <div id="toast">UPDATED!</div>
+
+    <div id="start-screen">
+        <div class="start-title">SUBMARINE TRAIN</div>
+        <div style="margin-bottom: 30px; opacity: 0.8; max-width: 80%;">Explore the depths. Collect passengers at Stations. Drop them off at Hubs for profit.</div>
         <button class="start-btn" onclick="startGame()">START MISSION</button>
-        <p style="color:white; margin-top:40px; opacity: 0.5; font-size: 0.8rem;">V 1.2 - PWA ENABLED</p>
+        <div style="margin-top: 20px; font-size: 12px; color: var(--brass);">Fleet Management Active</div>
     </div>
 
-    <div id="ui-layer">
-        <div id="sonar-warning">📡 SONAR: NIBBLER DETECTED!</div>
+    <canvas id="gameCanvas"></canvas>
 
-        <div id="top-bar">
-            <div style="display:flex; gap:10px;">
-                <div class="stat-pill">💰 <span id="gold-val">100</span></div>
-                <div class="stat-pill">🚃 <span id="fleet-count">4</span>/10</div>
+    <div class="hud">
+        <div style="display:flex; gap:10px;">
+            <div class="pill">💰 <span id="gold-val">0</span></div>
+            <div class="pill">👥 <span id="pass-val">0</span></div>
+        </div>
+        <div class="pill">⚙️ <span id="train-len">0</span>/10</div>
+    </div>
+
+    <div class="controls">
+        <div class="btn-circle" onclick="openShop()">🛒<span>SHOP</span></div>
+        <div class="btn-circle" onclick="openMerge()">🏗️<span>YARD</span></div>
+    </div>
+
+    <div id="shop-modal" class="modal">
+        <h2 style="text-align:center; margin:0; color:var(--gold); padding: 15px 0;">Fleet Market</h2>
+        <div class="scroll-list" id="shop-list"></div>
+        <button onclick="closeModals()" style="background:var(--punch); border:none; padding:12px; border-radius:10px; color:white; font-weight:bold; cursor:pointer; margin: 10px;">CLOSE</button>
+    </div>
+
+    <div id="merge-modal" class="modal">
+        <h2 style="text-align:center; margin:0; color:var(--gold); padding: 15px 0;">Assembly Yard</h2>
+        <p style="text-align: center; font-size: 11px; margin-top: -10px; opacity: 0.7;">Select two items of the same level to merge them!</p>
+        <div class="scroll-list" style="max-height: 55vh; padding: 0 15px;">
+            <div class="yard-section">
+                <div class="yard-label">Engines</div>
+                <div class="merge-grid" id="engine-grid"></div>
             </div>
-            <div class="stat-pill">⚙️ <span id="health-val">100</span>%</div>
-        </div>
-
-        <div id="action-buttons">
-            <div class="circle-btn" style="background:var(--gold)" onclick="openModal('shop')">🛒</div>
-            <div class="circle-btn" style="background:var(--teal)" onclick="openModal('garage')">📦</div>
-        </div>
-
-        <div id="shop-modal" class="modal">
-            <h2 style="margin:0; text-align:center; color:var(--gold)">ENGINEERING BAY</h2>
-            <div id="shop-list"></div>
-            <div class="btn btn-red" onclick="closeModals()">Back to Water</div>
-        </div>
-
-        <div id="garage-modal" class="modal">
-            <h2 style="margin:0; text-align:center; color:var(--teal)">FLEET MANAGER</h2>
-            <div class="tab-row">
-                <div class="tab-btn active" id="tab-engines" onclick="setGarageTab('engines')">Engines</div>
-                <div class="tab-btn" id="tab-cars" onclick="setGarageTab('cars')">Cars</div>
-                <div class="tab-btn" id="tab-cabooses" onclick="setGarageTab('cabooses')">Cabooses</div>
+            <div class="yard-section">
+                <div class="yard-label">Cabooses</div>
+                <div class="merge-grid" id="caboose-grid"></div>
             </div>
-            <div id="garage-list" class="garage-grid"></div>
-            <div class="btn btn-red" style="margin-top:10px;" onclick="closeModals()">Close</div>
+            <div class="yard-section">
+                <div class="yard-label">Coaches</div>
+                <div class="merge-grid" id="coach-grid" style="grid-template-columns: repeat(5, 1fr);"></div>
+            </div>
         </div>
-
-        <div id="catch-modal" class="modal">
-            <h3 style="text-align:center; color:var(--gold); margin:0">NIBBLER CAUGHT! 🐡</h3>
-            <p style="text-align:center">Machinery restored!</p>
-            <div class="btn btn-gold" onclick="handleCatch()">Repair Machinery (+40%)</div>
+        <div id="yard-controls" style="display:none; padding: 0 15px;">
+            <div class="controls-small">
+                <button id="toggle-btn" class="btn-small" style="background:var(--gold); color:black;" onclick="toggleEquip()">EQUIP / UNEQUIP</button>
+                <button class="btn-small" style="background:var(--punch); color:white;" onclick="scrapItem()">SCRAP</button>
+            </div>
         </div>
+        <button onclick="closeModals()" style="background:var(--brass); border:none; padding:12px; border-radius:10px; color:black; font-weight:bold; margin: 15px; cursor:pointer;">EXIT YARD</button>
     </div>
 </div>
 
@@ -234,318 +186,449 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    let gold = 100;
-    let health = 100;
-    let engineSpeed = 2.5;
-    let garageTab = 'cars';
-    let gameState = 'START_SCREEN';
+    const FLAT_PRICE = 500;
+    const MAX_ACTIVE_COACHES = 10;
+    const SHOP_DATA = [
+        { id: 'm_coach_standard', name: "Wooden Coach", price: FLAT_PRICE, icon: '🚃', desc: "Holds 6+ people", color: '#0077b6' },
+        { id: 'm_coach_ruby', name: "Ruby Coach", price: 1200, icon: '🔻', desc: "Wealthy passengers", color: '#9b2226' },
+        { id: 'm_coach_vend', name: "Vending Car", price: 2000, icon: '🥤', desc: "Passive gold gen", color: '#06d6a0' },
+        { id: 'm_sub_steam', name: "Steam Engine", price: 2500, icon: '🚂', desc: "Basic power", color: '#9e2a2b' },
+        { id: 'm_sub_bullet', name: "Steel Engine", price: 6000, icon: '🚄', desc: "High velocity!", color: '#4a4e69' },
+        { id: 'm_tail_basic', name: "Brake Van", price: FLAT_PRICE, icon: '🏠', desc: "End car", color: '#e09f3e' }
+    ];
 
-    let inventory = {
-        engines: [{ id: 'e1', name: 'Classic Red', color: '#9e2a2b', active: true, level: 1 }],
-        cars: [
-            { id: 'c1', name: 'Sapphire', color: '#005f73', level: 1, active: true },
-            { id: 'c2', name: 'Amethyst', color: '#9b5de5', level: 1, active: true },
-            { id: 'c3', name: 'Topaz', color: '#00b4d8', level: 1, active: true },
-            { id: 'c4', name: 'Emerald', color: '#2a9d8f', level: 1, active: true }
-        ],
-        cabooses: [{ id: 'b1', name: 'Old Rusty', color: '#5e503f', active: true, level: 1 }]
-    };
+    // MONEY RESET FOR DEPLOYMENT
+    let gold = 0; 
+    let worldX = 0;
+    let trainY = 0, targetY = 0;
+    let state = 'START';
+    let w, h;
 
-    const shopCatalog = {
-        engines: [
-            { name: 'Deep Sea', color: '#001233', price: 250 },
-            { name: 'Gold Rush', color: '#ffb703', price: 500 },
-            { name: 'Neon Reef', color: '#39ff14', price: 400 },
-            { name: 'Abyss Hunter', color: '#240046', price: 600 }
-        ],
-        cabooses: [
-            { name: 'Royal Guard', color: '#6a040f', price: 150 },
-            { name: 'Crystal End', color: '#ade8f4', price: 300 },
-            { name: 'Bio-Flare', color: '#ff006e', price: 200 },
-            { name: 'Sunken Vault', color: '#6d6875', price: 350 }
-        ]
-    };
+    // Initial Inventory
+    let inventory = [
+        { id: Math.random(), type: 'sub', subType: 'steam', lvl: 1, icon: '🚂', color: '#9e2a2b', equipped: true },
+        { id: Math.random(), type: 'coach', subType: 'standard', lvl: 1, icon: '🚃', color: '#0077b6', equipped: true },
+        { id: Math.random(), type: 'tail', subType: 'basic', lvl: 1, icon: '🏠', color: '#e09f3e', equipped: true }
+    ];
+    let selectedId = null;
 
-    let width, height, trainY, targetY;
+    let activeEngine = null;
+    let activeTail = null;
+    let activeCoaches = [];
+
     let stations = [];
-    let blowfish = { x: -5000, y: 0, active: false, attached: false, cooldown: 300, pulse: 0 };
-    let bgProps = { mountains: [], bubbles: [] };
-    let cameraScale = 1.0, cameraX = 0;
+    let bubbles = Array.from({length: 40}, () => ({ x: Math.random()*2000, y: Math.random()*1000, r: Math.random()*3+1, s: Math.random()*2+1 }));
+    let floatingTexts = [];
 
-    function resize() {
-        width = window.innerWidth;
-        height = window.innerHeight;
-        canvas.width = width;
-        canvas.height = height;
-        trainY = height / 2;
-        targetY = height / 2;
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.style.opacity = '1';
+        setTimeout(() => t.style.opacity = '0', 1500);
     }
 
     function startGame() {
-        document.getElementById('home-screen').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('home-screen').style.display = 'none';
-            document.getElementById('top-bar').style.opacity = '1';
-            document.getElementById('action-buttons').style.opacity = '1';
-            gameState = 'PLAYING';
-        }, 500);
+        document.getElementById('start-screen').style.display = 'none';
+        state = 'PLAY';
     }
 
-    function init() {
-        window.addEventListener('resize', resize);
-        resize();
-        for(let i=0; i<15; i++) bgProps.mountains.push({ x: Math.random()*8000-2000, w: 600+Math.random()*800, h: 200+Math.random()*500, c: `rgba(1, 42, 74, ${0.1+Math.random()*0.1})` });
-        for(let i=0; i<60; i++) bgProps.bubbles.push({ x: Math.random()*width*5, y: Math.random()*height, s: Math.random()*1+0.5, r: Math.random()*2.5+1 });
-        updateUI();
-        requestAnimationFrame(gameLoop);
+    function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+        if(trainY === 0) trainY = targetY = h / 2;
     }
 
-    // Modal and Shop logic remained unchanged per request
-    function openModal(id) {
-        if (gameState === 'CATCH') return;
-        closeModals();
-        const oldState = gameState;
-        gameState = 'PAUSED';
-        document.getElementById(id + '-modal').style.display = 'flex';
-        if (id === 'shop') populateShop();
-        if (id === 'garage') populateGarage();
+    function updateUI() {
+        document.getElementById('gold-val').innerText = Math.floor(gold);
+        const passSum = activeCoaches.reduce((a,b) => a + (b.pass||0), 0);
+        document.getElementById('pass-val').innerText = passSum;
+        document.getElementById('train-len').innerText = activeCoaches.length;
     }
 
     function closeModals() {
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        gameState = 'PLAYING';
+        state = 'PLAY';
     }
 
-    function populateShop() {
+    function openShop() {
+        state = 'PAUSE';
         const list = document.getElementById('shop-list');
         list.innerHTML = '';
-        const speedRow = document.createElement('div');
-        speedRow.className = 'item-row upgrade-btn';
-        speedRow.innerHTML = `<div><b>Increase Speed</b><br><small>Current: ${engineSpeed.toFixed(1)}</small></div><span>💰 250</span>`;
-        speedRow.onclick = () => { if (gold >= 250) { gold -= 250; engineSpeed += 0.5; populateShop(); updateUI(); } };
-        list.appendChild(speedRow);
-
-        ['engines', 'cabooses'].forEach(type => {
-            shopCatalog[type].forEach(item => {
-                const row = document.createElement('div');
-                row.className = 'item-row';
-                row.innerHTML = `<div><b>${item.name}</b><br><small>${type.slice(0, -1)}</small></div><span>💰 ${item.price}</span>`;
-                row.onclick = () => buyItem(type, item);
-                list.appendChild(row);
-            });
+        SHOP_DATA.forEach(item => {
+            const canAfford = gold >= item.price;
+            list.innerHTML += `
+                <div class="item-row">
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span style="font-size:24px;">${item.icon}</span>
+                        <div style="color:white;"><b>${item.name}</b><br><small style="opacity:0.7">${item.desc}</small></div>
+                    </div>
+                    <button onclick="buyItem('${item.id}', ${item.price})" 
+                            style="background:${canAfford?'var(--gold)':'#555'}; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer;"
+                            ${!canAfford?'disabled':''}>💰${item.price}</button>
+                </div>
+            `;
         });
-
-        const carRow = document.createElement('div');
-        carRow.className = 'item-row';
-        carRow.innerHTML = `<div><b>New Random Car</b></div><span>💰 150</span>`;
-        carRow.onclick = () => buyItem('cars', { name: 'Random', price: 150 });
-        list.appendChild(carRow);
-
-        ['engines', 'cars', 'cabooses'].forEach(type => {
-            const counts = {};
-            inventory[type].forEach(item => { if (item.level === 1) counts[item.name] = (counts[item.name] || 0) + 1; });
-            Object.keys(counts).forEach(name => {
-                if (counts[name] >= 2) {
-                    const mergeRow = document.createElement('div');
-                    mergeRow.className = 'item-row evolve-btn';
-                    mergeRow.innerHTML = `<div><b>FUSE 2x ${name}</b><br><small>Crystal Evolution</small></div><span>💰 100</span>`;
-                    mergeRow.onclick = () => fuseItems(type, name);
-                    list.appendChild(mergeRow);
-                }
-            });
-        });
+        document.getElementById('shop-modal').style.display = 'flex';
     }
 
-    function fuseItems(type, name) {
-        if (gold >= 100) {
-            gold -= 100;
-            let removed = 0;
-            const original = inventory[type].find(i => i.name === name);
-            inventory[type] = inventory[type].filter(i => {
-                if (i.name === name && i.level === 1 && removed < 2) { removed++; return false; }
-                return true;
-            });
-            inventory[type].push({ id: 'crystal-' + Date.now(), name: name, color: original.color, level: 2, active: false });
-            populateShop(); updateUI();
+    function buyItem(id, price) {
+        if (gold < price) return;
+        gold -= price;
+        const base = SHOP_DATA.find(i => i.id === id);
+        const parts = id.split('_');
+        inventory.push({ 
+            id: Math.random(),
+            type: parts[1], 
+            subType: parts[2], 
+            lvl: 1, 
+            icon: base.icon, 
+            color: base.color,
+            equipped: false 
+        });
+        showToast("PURCHASED!");
+        updateUI();
+        openShop();
+    }
+
+    function openMerge() {
+        state = 'PAUSE';
+        selectedId = null;
+        renderYard();
+        document.getElementById('merge-modal').style.display = 'flex';
+    }
+
+    function renderYard() {
+        const engineGrid = document.getElementById('engine-grid');
+        const cabooseGrid = document.getElementById('caboose-grid');
+        const coachGrid = document.getElementById('coach-grid');
+
+        const engines = inventory.filter(i => i.type === 'sub');
+        const cabooses = inventory.filter(i => i.type === 'tail');
+        const coaches = inventory.filter(i => i.type === 'coach');
+
+        const drawGrid = (el, items, slots) => {
+            el.innerHTML = '';
+            const total = Math.max(items.length, slots);
+            for (let i = 0; i < total; i++) {
+                const item = items[i];
+                const isSelected = item && selectedId === item.id;
+                el.innerHTML += `
+                    <div class="slot ${item ? 'filled' : ''} ${isSelected ? 'selected' : ''}" 
+                         onclick="handleYardClick('${item ? item.id : 'none'}')">
+                        ${item ? item.icon : ''}
+                        ${item ? `<span class="lvl-tag">L${item.lvl}</span>` : ''}
+                        ${item ? `<div class="status-dot ${item.equipped ? 'on' : ''}"></div>` : ''}
+                    </div>
+                `;
+            }
+        };
+
+        drawGrid(engineGrid, engines, 5);
+        drawGrid(cabooseGrid, cabooses, 5);
+        drawGrid(coachGrid, coaches, 10);
+
+        document.getElementById('yard-controls').style.display = selectedId !== null ? 'block' : 'none';
+        const item = inventory.find(i => i.id === selectedId);
+        if (item) {
+            document.getElementById('toggle-btn').innerText = item.equipped ? "UNEQUIP" : "EQUIP";
         }
     }
 
-    function buyItem(type, item) {
-        if (gold >= item.price) {
-            gold -= item.price;
-            let newItem = { id: Date.now().toString(), active: false, level: 1 };
-            if (type === 'cars') {
-                const styles = ['Sapphire', 'Amethyst', 'Topaz', 'Emerald', 'Ruby', 'Amber'];
-                const colors = ['#005f73', '#9b5de5', '#00b4d8', '#2a9d8f', '#e63946', '#ff9f1c'];
-                const idx = Math.floor(Math.random()*styles.length);
-                newItem = { ...newItem, name: styles[idx], color: colors[idx] };
-            } else { newItem = { ...newItem, name: item.name, color: item.color }; }
-            inventory[type].push(newItem); updateUI(); populateShop();
+    function handleYardClick(idString) {
+        if (idString === 'none') {
+            selectedId = null;
+            renderYard();
+            return;
         }
+
+        const idNum = parseFloat(idString);
+
+        if (selectedId === null) {
+            selectedId = idNum;
+        } else if (selectedId === idNum) {
+            selectedId = null;
+        } else {
+            const aIdx = inventory.findIndex(i => i.id === selectedId);
+            const bIdx = inventory.findIndex(i => i.id === idNum);
+            
+            if (aIdx === -1 || bIdx === -1) {
+                 selectedId = idNum;
+                 renderYard();
+                 return;
+            }
+
+            const a = inventory[aIdx];
+            const b = inventory[bIdx];
+
+            // MERGE ATTEMPT
+            if (a.type === b.type && a.subType === b.subType && a.lvl === b.lvl) {
+                const shouldBeEquipped = a.equipped || b.equipped;
+                
+                inventory[bIdx].lvl++;
+                inventory[bIdx].equipped = shouldBeEquipped;
+                inventory.splice(aIdx, 1);
+                
+                selectedId = null;
+                showToast("MERGED! LEVEL UP!");
+                rebuildTrain();
+            } else {
+                selectedId = idNum;
+            }
+        }
+        renderYard();
     }
 
-    function setGarageTab(tab) {
-        garageTab = tab;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('tab-' + tab).classList.add('active');
-        populateGarage();
-    }
-
-    function populateGarage() {
-        const list = document.getElementById('garage-list');
-        list.innerHTML = '';
-        inventory[garageTab].forEach(item => {
-            const card = document.createElement('div');
-            card.className = `car-card ${item.active ? 'active' : ''}`;
-            let icon = garageTab === 'engines' ? '🚂' : (garageTab === 'cabooses' ? '🏠' : '🚃');
-            if (item.level === 2) icon = '💎';
-            card.innerHTML = `<div style="font-size:24px; color:${item.color}">${icon}</div><div style="font-size:10px">${item.name}</div>`;
-            card.onclick = () => {
-                if (garageTab === 'cars') {
-                    const activeCount = inventory.cars.filter(c => c.active).length;
-                    if (item.active) item.active = false;
-                    else if (activeCount < 10) item.active = true;
+    function toggleEquip() {
+        if (selectedId === null) return;
+        const item = inventory.find(i => i.id === selectedId);
+        if (!item) return;
+        
+        if (item.equipped) {
+            const activeEngines = inventory.filter(i => i.type === 'sub' && i.equipped);
+            const activeTails = inventory.filter(i => i.type === 'tail' && i.equipped);
+            if (item.type === 'sub' && activeEngines.length <= 1) {
+                showToast("NEED AT LEAST 1 ENGINE!");
+                return;
+            }
+            if (item.type === 'tail' && activeTails.length <= 1) {
+                showToast("NEED AT LEAST 1 CABOOSE!");
+                return;
+            }
+            item.equipped = false;
+            showToast("UNEQUIPPED");
+        } else {
+            if (item.type === 'sub') {
+                inventory.filter(i => i.type === 'sub').forEach(i => i.equipped = false);
+                item.equipped = true;
+                showToast("ENGINE EQUIPPED");
+            } else if (item.type === 'tail') {
+                inventory.filter(i => i.type === 'tail').forEach(i => i.equipped = false);
+                item.equipped = true;
+                showToast("CABOOSE EQUIPPED");
+            } else if (item.type === 'coach') {
+                const activeCoachesCount = inventory.filter(i => i.type === 'coach' && i.equipped).length;
+                if (activeCoachesCount < MAX_ACTIVE_COACHES) {
+                    item.equipped = true;
+                    showToast("COACH EQUIPPED");
                 } else {
-                    inventory[garageTab].forEach(i => i.active = false);
-                    item.active = true;
+                    showToast("TRAIN IS FULL! (MAX 10)");
                 }
-                populateGarage(); updateUI();
-            };
-            list.appendChild(card);
+            }
+        }
+        rebuildTrain();
+        renderYard();
+    }
+
+    function scrapItem() {
+        if (selectedId === null) return;
+        const idx = inventory.findIndex(i => i.id === selectedId);
+        const item = inventory[idx];
+        const activeEngines = inventory.filter(i => i.type === 'sub' && i.equipped);
+        const activeTails = inventory.filter(i => i.type === 'tail' && i.equipped);
+        
+        if (item.equipped && item.type === 'sub' && activeEngines.length <= 1) return;
+        if (item.equipped && item.type === 'tail' && activeTails.length <= 1) return;
+
+        inventory.splice(idx, 1);
+        selectedId = null;
+        showToast("SCRAPPED ITEM");
+        rebuildTrain();
+        renderYard();
+    }
+
+    function rebuildTrain() {
+        const engine = inventory.find(i => i.type === 'sub' && i.equipped);
+        const tail = inventory.find(i => i.type === 'tail' && i.equipped);
+        const coaches = inventory.filter(i => i.type === 'coach' && i.equipped);
+
+        activeEngine = engine ? {...engine} : { type:'sub', subType:'steam', lvl: 1, color: '#9e2a2b' };
+        activeTail = tail ? {...tail} : { type:'tail', subType:'basic', lvl: 1, color: '#e09f3e' };
+        
+        const oldCoaches = [...activeCoaches];
+        activeCoaches = coaches.slice(0, 10).map((c) => {
+            const match = oldCoaches.find(oc => oc.id === c.id);
+            return { ...c, pass: match ? match.pass : 0, stock: match ? match.stock : 0 };
+        });
+        updateUI();
+    }
+
+    function getCap(c) {
+        let base = c.lvl * 6;
+        if (c.subType === 'ruby') base = c.lvl * 8;
+        return base;
+    }
+
+    function spawnStation() {
+        stations.push({ 
+            x: worldX + w + 100, 
+            y: 150 + Math.random()*(h-300), 
+            type: Math.random() > 0.4 ? 'STATION' : 'HUB', 
+            col: false 
         });
     }
 
-    function handleCatch() { health = Math.min(100, health + 40); blowfish.active = false; blowfish.attached = false; blowfish.cooldown = 1000; closeModals(); }
-    function updateUI() { document.getElementById('gold-val').innerText = Math.floor(gold); document.getElementById('health-val').innerText = Math.floor(health); document.getElementById('fleet-count').innerText = inventory.cars.filter(c => c.active).length; }
-
-    canvas.addEventListener('pointerdown', (e) => {
-        if (gameState !== 'PLAYING') return;
-        const rect = canvas.getBoundingClientRect();
-        const touchX = (e.clientX - rect.left) / cameraScale - cameraX;
-        const touchY = (e.clientY - rect.top) / cameraScale;
-        if (blowfish.active) {
-            const dx = touchX - blowfish.x; const dy = touchY - blowfish.y;
-            if (Math.sqrt(dx*dx + dy*dy) < 80) { gameState = 'CATCH'; document.getElementById('catch-modal').style.display = 'flex'; return; }
-        }
+    canvas.addEventListener('pointerdown', e => {
+        if (state !== 'PLAY') return;
         targetY = e.clientY;
+
+        // Vending Machine Collection
+        let trainFullWidth = 150 + (activeCoaches.length * 85) + 60;
+        let startX = (w / 2) - (trainFullWidth / 2);
+        let currentXPos = startX + 50; 
+
+        for (let i = 0; i < activeCoaches.length; i++) {
+            const c = activeCoaches[i];
+            currentXPos += 85; 
+            if (c.subType === 'vend') {
+                const dist = Math.hypot(e.clientX - currentXPos, e.clientY - trainY);
+                if (dist < 45 && c.stock >= 100) {
+                    const gain = 75 * c.lvl;
+                    gold += gain;
+                    c.stock = 0;
+                    floatingTexts.push({ x: e.clientX, y: e.clientY, text: `+$${gain}`, life: 1 });
+                    updateUI();
+                }
+            }
+        }
     });
 
-    function drawPart(x, y, item, type) {
-        ctx.save(); ctx.translate(x, y); ctx.fillStyle = item.color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-        const hOffset = item.level === 2 ? -10 : 0; const extraH = item.level === 2 ? 15 : 0;
-        if (item.level === 2) { ctx.shadowBlur = 15; ctx.shadowColor = '#fff'; }
-        if (type === 'engine') {
-            ctx.beginPath(); ctx.roundRect(0, -35 + hOffset, 110, 65 + extraH, 12); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(110, 0); ctx.lineTo(135, 25); ctx.lineTo(110, 25); ctx.fill();
-            ctx.fillStyle = '#333'; ctx.fillRect(80, -55 + hOffset, 20, 30);
-        } else if (type === 'car') {
-            const h = item.level === 2 ? 65 : 50; const yO = item.level === 2 ? -40 : -25;
-            ctx.beginPath(); ctx.roundRect(0, yO, 80, h, 8); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#caf0f8'; for(let i=0; i<(item.level === 2 ? 4 : 2); i++) ctx.fillRect(10 + (i%2)*35, yO + 10 + Math.floor(i/2)*25, 25, 15);
+    function update() {
+        if (state !== 'PLAY') return;
+        const baseSpeed = activeEngine.subType === 'bullet' ? 7.5 : 4.5;
+        const speed = baseSpeed + (activeEngine.lvl * 0.4);
+        worldX += speed;
+        trainY += (targetY - trainY) * 0.08;
+
+        if (Math.random() < 0.012) spawnStation();
+
+        let trainFullWidth = 150 + (activeCoaches.length * 85) + 60;
+        let startX = (w / 2) - (trainFullWidth / 2);
+        let engineVisualX = startX + (activeCoaches.length * 85) + 100;
+        let engineWorldX = worldX + engineVisualX;
+
+        stations.forEach(s => {
+            if (!s.col && Math.abs(s.x - engineWorldX) < 90 && Math.abs(s.y - trainY) < 100) {
+                s.col = true;
+                if (s.type === 'STATION') {
+                    activeCoaches.forEach(c => {
+                        let space = getCap(c) - (c.pass || 0);
+                        if (space > 0) {
+                            let gain = Math.min(space, 1 + Math.floor(Math.random() * 3));
+                            c.pass = (c.pass || 0) + gain;
+                        }
+                    });
+                } else if (s.type === 'HUB') {
+                    activeCoaches.forEach(c => {
+                        let mult = c.subType === 'ruby' ? 2.5 : 1;
+                        gold += (c.pass || 0) * (100 + (c.lvl * 25)) * mult;
+                        c.pass = 0;
+                    });
+                }
+                updateUI();
+            }
+        });
+
+        activeCoaches.forEach(c => {
+            if (c.subType === 'vend') {
+                if ((c.pass || 0) > 0 && c.stock < 100) {
+                    c.stock += (0.025 + (c.lvl * 0.01));
+                    if (c.stock > 100) c.stock = 100;
+                }
+            }
+        });
+
+        stations = stations.filter(s => s.x > worldX - 1000);
+        floatingTexts.forEach(t => t.life -= 0.02);
+        floatingTexts = floatingTexts.filter(t => t.life > 0);
+    }
+
+    function drawTrainPart(x, y, type, lvl, pCount = 0, color, subType, stock = 0) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.lineWidth = 3; ctx.strokeStyle = "white";
+
+        if (type === 'sub') {
+            ctx.fillStyle = color;
+            if (subType === 'bullet') {
+                ctx.beginPath(); ctx.moveTo(0, -25); ctx.lineTo(80, -25); 
+                ctx.quadraticCurveTo(110, 0, 80, 25); ctx.lineTo(0, 25); ctx.closePath();
+                ctx.fill(); ctx.stroke();
+            } else {
+                ctx.beginPath(); ctx.roundRect(0, -30, 100, 60, [0, 15, 15, 0]); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = "#333"; ctx.fillRect(70, -45, 15, 20);
+            }
+        } else if (type === 'coach') {
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.roundRect(-40, -25, 80, 50, 8); ctx.fill(); ctx.stroke();
+            if (subType === 'ruby') {
+                ctx.fillStyle = "#ff0000"; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(8, -14); ctx.lineTo(0, -6); ctx.lineTo(-8, -14); ctx.fill();
+            } else if (subType === 'vend') {
+                ctx.fillStyle = "#ffb703"; ctx.fillRect(-15, -15, 30, 30);
+                ctx.fillStyle = "black"; ctx.font = "14px Arial"; ctx.textAlign = "center"; ctx.fillText("🥤", 0, 5);
+                ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-20, 28, 40, 6);
+                ctx.fillStyle = stock >= 100 ? "#ffb703" : "#00f5d4"; ctx.fillRect(-20, 28, 40 * (stock/100), 6);
+            }
+            const capacity = getCap({lvl, subType});
+            const visualCap = Math.min(capacity, 12);
+            const cols = 3; const rows = Math.ceil(visualCap / cols);
+            for(let i=0; i<visualCap; i++) {
+                ctx.fillStyle = "rgba(255,255,255,0.4)";
+                const r = i % rows; const c = Math.floor(i / rows);
+                const wx = -30 + (c * 24); const wy = -18 + (r * 12);
+                ctx.beginPath(); ctx.roundRect(wx, wy, 8, 8, 2); ctx.fill();
+                if (i < pCount) { ctx.fillStyle="#111"; ctx.font="8px Arial"; ctx.textAlign = "center"; ctx.fillText("👤", wx + 4, wy + 7); }
+            }
         } else {
-            ctx.beginPath(); ctx.moveTo(0, 25); ctx.lineTo(40, -45 + hOffset); ctx.lineTo(80, 25); ctx.fill(); ctx.stroke();
-            ctx.beginPath(); ctx.roundRect(10, -15 + hOffset, 60, 40 + extraH, 5); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.roundRect(-50, -30, 90, 60, [10, 0, 0, 10]); ctx.fill(); ctx.stroke();
         }
         ctx.restore();
     }
 
-    function drawStation(s) {
-        ctx.save(); ctx.translate(s.x, trainY - 100); ctx.fillStyle = '#457b9d'; ctx.strokeStyle = '#a8dadc'; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.roundRect(0, 0, 160, 60, 15); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#f1faee'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("PICKUP", 80, 35);
-        ctx.restore();
-    }
-
-    function drawNibbler() {
-        if (!blowfish.active) return;
-        ctx.save(); ctx.translate(blowfish.x, blowfish.y);
-        const s = 1.2 + Math.sin(blowfish.pulse) * 0.2; ctx.scale(s, s);
-        ctx.shadowBlur = 30; ctx.shadowColor = '#ff5500'; ctx.fillStyle = '#ff6b35';
-        ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke();
-        ctx.restore();
-    }
-
-    function update() {
-        if (gameState !== 'PLAYING' && gameState !== 'START_SCREEN') return;
-        
-        // Slower drift speed for the start screen
-        let speed = gameState === 'START_SCREEN' ? 0.5 : engineSpeed;
-        if (blowfish.attached) speed *= 0.35;
-        
-        trainY += (targetY - trainY) * 0.05;
-        const activeCars = inventory.cars.filter(c => c.active);
-        const trainLen = 110 + (activeCars.length * 85) + 85;
-        const targetScale = Math.min(1.0, width / (trainLen + 400));
-        cameraScale += (targetScale - cameraScale) * 0.05;
-        cameraX += ((width/cameraScale)*0.85 - trainLen - cameraX) * 0.05;
-
-        bgProps.mountains.forEach(m => m.x -= speed * 0.8);
-        bgProps.bubbles.forEach(b => {
-            b.y -= b.s; b.x -= speed * 5;
-            if (b.y < -20) b.y = height + 20;
-            if (b.x < -1000) b.x = width/cameraScale + 1000;
+    function draw() {
+        ctx.clearRect(0, 0, w, h);
+        bubbles.forEach(b => {
+            ctx.fillStyle = "rgba(255,255,255,0.15)";
+            b.y -= b.s; if (b.y < -20) b.y = h + 20;
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill();
         });
 
-        if (gameState === 'START_SCREEN') return;
+        if (state === 'START') return;
 
-        const sonarEl = document.getElementById('sonar-warning');
-        if (blowfish.active && !blowfish.attached) {
-            const screenX = (blowfish.x + cameraX) * cameraScale;
-            sonarEl.style.display = screenX > width ? 'block' : 'none';
-        } else sonarEl.style.display = 'none';
-
-        if (blowfish.active) {
-            blowfish.pulse += 0.15;
-            if (!blowfish.attached) {
-                blowfish.x -= (speed + 2.0); blowfish.y += (trainY - 40 - blowfish.y) * 0.03;
-                const engineX = (activeCars.length + 1) * 85;
-                if (Math.abs(blowfish.x - engineX) < 50) blowfish.attached = true;
-                if (blowfish.x < -2000) { blowfish.active = false; blowfish.cooldown = 500; }
-            } else {
-                const engineX = (activeCars.length + 1) * 85;
-                blowfish.x = engineX + 60; blowfish.y = trainY - 30;
-                health -= 0.15; if (health <= 0) health = 0;
-            }
-        } else if (blowfish.cooldown > 0) blowfish.cooldown--;
-        else if (Math.random() < 0.004) { blowfish.active = true; blowfish.x = (activeCars.length + 5) * 200 + 2000; blowfish.y = trainY; blowfish.attached = false; }
-
-        if (Math.random() < 0.005) stations.push({ x: width/cameraScale + 2000, collected: false });
+        ctx.save(); ctx.translate(-worldX, 0);
         stations.forEach(s => {
-            s.x -= speed * 5; const engineX = (activeCars.length + 1) * 85;
-            if (!s.collected && Math.abs(s.x - engineX) < 150) { s.collected = true; gold += 15 + (activeCars.length * 5); updateUI(); }
+            ctx.fillStyle = s.type === 'HUB' ? "#ef476f" : "#ffb703";
+            ctx.beginPath(); ctx.roundRect(s.x, s.y - 60, 110, 110, 15); ctx.fill();
+            ctx.fillStyle = "white"; ctx.font = "bold 14px sans-serif"; ctx.textAlign="center";
+            ctx.fillText(s.type === 'HUB' ? 'GRAND HUB' : 'STATION', s.x + 55, s.y + 15);
+            ctx.font = "34px Arial"; ctx.fillText(s.type === 'HUB' ? '🏦' : '🚉', s.x + 55, s.y - 10);
         });
-        stations = stations.filter(s => s.x > -2000);
-    }
-
-    function gameLoop() {
-        ctx.clearRect(0, 0, width, height);
-        ctx.save(); ctx.scale(cameraScale, cameraScale); ctx.translate(cameraX, 0);
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 14;
-        ctx.beginPath(); ctx.moveTo(-10000, trainY + 36); ctx.lineTo(10000, trainY + 36); ctx.stroke();
-        const activeCars = inventory.cars.filter(c => c.active);
-        const engine = inventory.engines.find(e => e.active);
-        const caboose = inventory.cabooses.find(b => b.active);
-        stations.forEach(drawStation);
-        if (caboose) drawPart(0, trainY, caboose, 'caboose');
-        activeCars.forEach((car, i) => drawPart((i + 1) * 85, trainY, car, 'car'));
-        if (engine) drawPart((activeCars.length + 1) * 85, trainY, engine, 'engine');
-        if (gameState !== 'START_SCREEN') drawNibbler();
         ctx.restore();
-        update(); requestAnimationFrame(gameLoop);
-    }
 
-    // PWA Service Worker Registration
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            const swCode = `self.addEventListener('fetch', function(event) {});`;
-            const blob = new Blob([swCode], {type: 'text/javascript'});
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl).catch(err => console.log('SW registration failed:', err));
+        let trainFullWidth = 150 + (activeCoaches.length * 85) + 60;
+        let startX = (w / 2) - (trainFullWidth / 2);
+        let curX = startX + 50; 
+        drawTrainPart(curX, trainY, 'tail', activeTail.lvl, 0, activeTail.color, activeTail.subType);
+        activeCoaches.forEach(c => {
+            ctx.strokeStyle = "#222"; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.moveTo(curX + 40, trainY); ctx.lineTo(curX + 60, trainY); ctx.stroke();
+            curX += 85; drawTrainPart(curX, trainY, 'coach', c.lvl, c.pass, c.color, c.subType, c.stock);
+        });
+        ctx.strokeStyle = "#222"; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(curX + 40, trainY); ctx.lineTo(curX + 60, trainY); ctx.stroke();
+        curX += 60; drawTrainPart(curX, trainY, 'sub', activeEngine.lvl, 0, activeEngine.color, activeEngine.subType);
+
+        floatingTexts.forEach(t => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${t.life})`;
+            ctx.font = "bold 22px sans-serif"; ctx.fillText(t.text, t.x, t.y - (1 - t.life) * 60);
         });
     }
 
-    init();
+    function frame() { update(); draw(); requestAnimationFrame(frame); }
+    window.addEventListener('resize', resize);
+    resize(); rebuildTrain(); frame();
 </script>
 </body>
 </html>
+
+```
