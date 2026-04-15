@@ -1,10 +1,9 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Submarine Train</title>
+    <title>Sub-Train: Deep Sea Adventure</title>
     <style>
         :root {
             --water: #00b4d8;
@@ -12,8 +11,8 @@
             --gold: #ffb703;
             --brass: #e09f3e;
             --punch: #ef476f;
-            --ruby: #9b2226;
-            --ui-bg: rgba(1, 22, 39, 0.95);
+            --ui-bg: rgba(1, 22, 39, 0.92);
+            --bubble: rgba(255, 255, 255, 0.4);
         }
 
         body, html {
@@ -21,127 +20,188 @@
             width: 100%; height: 100%;
             overflow: hidden;
             background-color: var(--deep);
-            font-family: 'Trebuchet MS', sans-serif;
+            font-family: 'Fredoka One', 'Segoe UI', cursive, sans-serif;
             user-select: none;
+            color: white;
         }
 
         #game-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        canvas { display: block; touch-action: none; background: linear-gradient(to bottom, #00b4d8, #0077b6, #023e8a); }
+        canvas { display: block; touch-action: none; background: linear-gradient(to bottom, #48cae4, #023e8a); }
 
-        /* Start Screen */
+        /* Fancy Startup Screen */
         #start-screen {
             position: absolute; inset: 0;
-            background: radial-gradient(circle at center, #0077b6 0%, #011627 100%);
+            background: radial-gradient(circle at center, #00b4d8 0%, #0077b6 100%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 2000; color: white; text-align: center;
+            z-index: 2000;
+            overflow: hidden;
         }
 
-        .start-title {
-            font-size: 3.5rem; color: var(--gold); text-shadow: 0 0 20px rgba(255,183,3,0.5);
-            margin-bottom: 10px; font-weight: 900; letter-spacing: -2px;
+        .splash-bubble {
+            position: absolute; background: var(--bubble);
+            border-radius: 50%; pointer-events: none;
+            animation: floatUp var(--d) linear infinite;
+            bottom: -50px;
         }
 
-        .start-btn {
-            background: var(--gold); color: #333; border: none; padding: 18px 45px;
-            font-size: 1.5rem; font-weight: bold; border-radius: 50px; cursor: pointer;
-            box-shadow: 0 8px 0 #cc9200; transition: transform 0.1s;
+        @keyframes floatUp {
+            from { transform: translateY(0) translateX(0); opacity: 0.8; }
+            to { transform: translateY(-120vh) translateX(var(--x)); opacity: 0; }
         }
-        .start-btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #cc9200; }
 
+        .logo-container {
+            position: relative;
+            animation: bounce 3s ease-in-out infinite;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+        }
+
+        .logo-text {
+            font-size: 5rem;
+            margin: 0;
+            background: linear-gradient(to bottom, #ffeb3b, #ff9800);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 10px 0px rgba(0,0,0,0.2));
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+
+        .sub-caption {
+            font-size: 1.5rem;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-top: -10px;
+        }
+
+        #start-btn {
+            padding: 20px 60px;
+            font-size: 2rem;
+            background: #ff477e;
+            color: white;
+            border: 6px solid white;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #c9184a;
+            transition: all 0.1s;
+            position: relative;
+            z-index: 2001;
+        }
+
+        #start-btn:hover { transform: scale(1.05); }
+        #start-btn:active { transform: translateY(6px); box-shadow: 0 4px 0 #c9184a; }
+
+        /* Game UI */
         .hud {
-            position: absolute; top: 20px; left: 20px; right: 20px;
+            position: absolute; top: 15px; left: 15px; right: 15px;
             display: flex; justify-content: space-between; pointer-events: none; z-index: 100;
         }
 
         .pill {
-            background: var(--ui-bg); border: 2px solid var(--brass);
-            padding: 8px 15px; border-radius: 20px; color: white;
+            background: var(--ui-bg); border: 3px solid white;
+            padding: 10px 16px; border-radius: 20px; color: white;
             font-weight: bold; display: flex; align-items: center; gap: 8px;
             pointer-events: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-size: 16px;
         }
 
         .controls {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 15px; pointer-events: auto; z-index: 100;
+            display: flex; gap: 20px; pointer-events: auto; z-index: 100;
         }
 
         .btn-circle {
-            width: 65px; height: 65px; background: var(--gold);
-            border: 4px solid white; border-radius: 50%;
+            width: 85px; height: 85px; background: #ffb703;
+            border: 5px solid white; border-radius: 50%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            cursor: pointer; box-shadow: 0 5px 0 #cc9200;
-            font-size: 24px; transition: transform 0.1s;
+            cursor: pointer; box-shadow: 0 6px 0 #e6a700;
+            font-size: 24px; transition: transform 0.1s; color: #333;
         }
-        .btn-circle:active { transform: translateY(3px); box-shadow: 0 2px 0 #cc9200; }
-        .btn-circle span { font-size: 9px; font-weight: bold; color: #333; margin-top: 2px; }
+        .btn-circle:active { transform: translateY(3px); box-shadow: 0 3px 0 #e6a700; }
+        .btn-circle span { font-size: 11px; font-weight: 900; margin-top: 2px; text-transform: uppercase; }
 
         .modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #1d3557; border: 4px solid var(--brass); width: 92%; max-width: 480px;
-            padding: 20px; border-radius: 25px; display: none; flex-direction: column;
-            pointer-events: auto; z-index: 1000; color: white;
+            background: #023e8a; border: 6px solid white; width: 92%; max-width: 450px;
+            padding: 25px; border-radius: 30px; display: none; flex-direction: column;
+            pointer-events: auto; z-index: 1000; box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
-        /* Success Toast */
-        #toast {
-            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-            background: #06d6a0; color: #011627; padding: 10px 25px; border-radius: 30px;
-            font-weight: bold; font-size: 14px; opacity: 0; transition: opacity 0.3s;
-            z-index: 3000; pointer-events: none; border: 2px solid white;
-        }
-
-        .scroll-list { max-height: 40vh; overflow-y: auto; margin: 15px 0; }
+        .scroll-list { max-height: 50vh; overflow-y: auto; margin: 15px 0; padding-right: 10px; }
+        .shop-section-title { color: #ffeb3b; font-size: 1rem; text-transform: uppercase; margin: 20px 0 8px 0; letter-spacing: 1px; border-bottom: 3px solid rgba(255,255,255,0.2); font-weight: 900; }
+        
         .item-row {
-            background: rgba(255,255,255,0.1); border-radius: 12px; padding: 12px;
-            margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.1); border-radius: 18px; padding: 15px;
+            margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+            border: 2px solid rgba(255,255,255,0.1);
         }
-
-        .yard-section { margin-bottom: 15px; }
-        .yard-label { font-size: 10px; font-weight: bold; text-transform: uppercase; color: var(--gold); margin-bottom: 5px; opacity: 0.8; }
 
         .merge-grid {
-            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
-            background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+            background: rgba(0,0,0,0.2); padding: 12px; border-radius: 20px;
         }
         
         .slot {
-            aspect-ratio: 1; background: rgba(255,255,255,0.05); border-radius: 10px;
-            border: 2px dashed rgba(255,255,255,0.2); display: flex; align-items: center;
-            justify-content: center; font-size: 24px; position: relative;
+            aspect-ratio: 1; background: rgba(255,255,255,0.15); border-radius: 15px;
+            border: 3px dashed rgba(255,255,255,0.3); display: flex; align-items: center;
+            justify-content: center; font-size: 30px; position: relative;
         }
-        .slot.filled { background: rgba(255,255,255,0.1); border-style: solid; border-color: rgba(255,255,255,0.1); }
-        .slot.selected { border-color: var(--gold); background: rgba(255, 183, 3, 0.35); box-shadow: 0 0 10px var(--gold); }
-        
-        .status-dot { position: absolute; top: 4px; right: 4px; width: 10px; height: 10px; border-radius: 50%; background: #333; border: 1px solid rgba(255,255,255,0.2); }
-        .status-dot.on { background: #06d6a0; box-shadow: 0 0 8px #06d6a0; }
+        .slot.filled { border-style: solid; background: white; border-color: #ffb703; }
+        .slot.selected { border-color: #ff477e; background: #ffe5ec; transform: scale(1.05); }
+        .status-dot { position: absolute; top: 5px; right: 5px; width: 12px; height: 12px; border-radius: 50%; background: #06d6a0; opacity: 0; border: 2px solid white; }
+        .status-dot.on { opacity: 1; box-shadow: 0 0 8px #06d6a0; }
+        .lvl-tag { position: absolute; bottom: 4px; left: 4px; font-size: 10px; background: #ff477e; color: white; padding: 2px 5px; border-radius: 5px; font-weight: bold; }
 
-        .lvl-tag { position: absolute; bottom: 2px; left: 2px; font-size: 8px; background: var(--brass); color: black; padding: 1px 4px; border-radius: 3px; font-weight: bold; border: 1px solid rgba(0,0,0,0.2); }
-        
-        .controls-small { display: flex; gap: 5px; margin-top: 10px; }
-        .btn-small { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: filter 0.2s; }
-        .btn-small:active { filter: brightness(0.8); }
+        #buy-notification {
+            position: absolute; top: 25%; left: 50%; transform: translateX(-50%);
+            background: #ffeb3b; color: #333; padding: 15px 30px; border-radius: 30px;
+            font-weight: bold; z-index: 2000; display: none; pointer-events: none;
+            border: 4px solid white; font-size: 1.2rem;
+            animation: popUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popUp {
+            0% { transform: translate(-50%, 40px) scale(0.5); opacity: 0; }
+            30% { transform: translate(-50%, -20px) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -60px) scale(1); opacity: 0; }
+        }
+
+        button.close-btn { background: #ff477e; border: none; padding: 15px; border-radius: 15px; color: white; font-weight: bold; margin-top: 10px; cursor: pointer; border-bottom: 4px solid #c9184a; }
+        button.close-btn:active { transform: translateY(2px); border-bottom: 2px solid #c9184a; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <div id="toast">UPDATED!</div>
-
+    <!-- Fancier Kid-Friendly Start Screen -->
     <div id="start-screen">
-        <div class="start-title">SUBMARINE TRAIN</div>
-        <div style="margin-bottom: 30px; opacity: 0.8; max-width: 80%;">Explore the depths. Collect passengers at Stations. Drop them off at Hubs for profit.</div>
-        <button class="start-btn" onclick="startGame()">START MISSION</button>
-        <div style="margin-top: 20px; font-size: 12px; color: var(--brass);">Fleet Management Active</div>
+        <!-- Bubbles will be injected here via JS -->
+        <div class="logo-container">
+            <h1 class="logo-text">Sub-Train</h1>
+            <div class="sub-caption">Deep Sea Adventure! 🌊</div>
+        </div>
+        <button id="start-btn">LOADING...</button>
+        <p style="margin-top: 20px; font-weight: bold; color: rgba(255,255,255,0.7);">Tap to steer your train!</p>
     </div>
+
+    <div id="buy-notification">GREAT CHOICE! 🚢</div>
 
     <canvas id="gameCanvas"></canvas>
 
     <div class="hud">
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; flex-direction:column; gap:8px;">
             <div class="pill">💰 <span id="gold-val">0</span></div>
-            <div class="pill">👥 <span id="pass-val">0</span></div>
         </div>
-        <div class="pill">⚙️ <span id="train-len">0</span>/10</div>
+        <div style="display:flex; flex-direction:column; gap:8px; align-items: flex-end;">
+            <div class="pill">👥 <span id="pass-val">0</span> / <span id="max-pass-val">0</span></div>
+            <div class="pill">⚙️ <span id="train-len">0</span> / 12</div>
+        </div>
     </div>
 
     <div class="controls">
@@ -149,486 +209,471 @@
         <div class="btn-circle" onclick="openMerge()">🏗️<span>YARD</span></div>
     </div>
 
+    <!-- Shop -->
     <div id="shop-modal" class="modal">
-        <h2 style="text-align:center; margin:0; color:var(--gold); padding: 15px 0;">Fleet Market</h2>
+        <h2 style="text-align:center; color:#ffeb3b; margin-top:0; font-size: 2rem;">Big Shop!</h2>
         <div class="scroll-list" id="shop-list"></div>
-        <button onclick="closeModals()" style="background:var(--punch); border:none; padding:12px; border-radius:10px; color:white; font-weight:bold; cursor:pointer; margin: 10px;">CLOSE</button>
+        <button class="close-btn" onclick="closeModals()">GO BACK!</button>
     </div>
 
+    <!-- Yard -->
     <div id="merge-modal" class="modal">
-        <h2 style="text-align:center; margin:0; color:var(--gold); padding: 15px 0;">Assembly Yard</h2>
-        <p style="text-align: center; font-size: 11px; margin-top: -10px; opacity: 0.7;">Select two items of the same level to merge them!</p>
-        <div class="scroll-list" style="max-height: 55vh; padding: 0 15px;">
-            <div class="yard-section">
-                <div class="yard-label">Engines</div>
-                <div class="merge-grid" id="engine-grid"></div>
-            </div>
-            <div class="yard-section">
-                <div class="yard-label">Cabooses</div>
-                <div class="merge-grid" id="caboose-grid"></div>
-            </div>
-            <div class="yard-section">
-                <div class="yard-label">Coaches</div>
-                <div class="merge-grid" id="coach-grid" style="grid-template-columns: repeat(5, 1fr);"></div>
-            </div>
+        <h2 style="text-align:center; color:#ffeb3b; margin-top:0; font-size: 2rem;">My Fleet</h2>
+        <div class="scroll-list">
+            <p class="shop-section-title">Engines</p>
+            <div class="merge-grid" id="engine-grid"></div>
+            <p class="shop-section-title">Cars</p>
+            <div class="merge-grid" id="coach-grid"></div>
+            <p class="shop-section-title">Cabooses</p>
+            <div class="merge-grid" id="tail-grid"></div>
         </div>
-        <div id="yard-controls" style="display:none; padding: 0 15px;">
-            <div class="controls-small">
-                <button id="toggle-btn" class="btn-small" style="background:var(--gold); color:black;" onclick="toggleEquip()">EQUIP / UNEQUIP</button>
-                <button class="btn-small" style="background:var(--punch); color:white;" onclick="scrapItem()">SCRAP</button>
-            </div>
+        <div id="yard-controls" style="display:none; margin-top: 10px; gap: 10px;">
+            <button id="toggle-btn" onclick="toggleEquip()" style="flex:2; background:#ffeb3b; border:none; padding:15px; border-radius:15px; font-weight:bold; font-size: 1.1rem; border-bottom: 4px solid #c9a000;">USE IT!</button>
+            <button onclick="scrapItem()" style="flex:1; background:#ff477e; border:none; padding:15px; border-radius:15px; color:white; font-weight:bold; border-bottom: 4px solid #c9184a;">BYE BYE</button>
         </div>
-        <button onclick="closeModals()" style="background:var(--brass); border:none; padding:12px; border-radius:10px; color:black; font-weight:bold; margin: 15px; cursor:pointer;">EXIT YARD</button>
+        <button class="close-btn" style="background:#48cae4; border-bottom-color:#0096c7;" onclick="closeModals()">BACK TO OCEAN</button>
     </div>
 </div>
 
-<script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'sub-train-adventure-v5';
+
+    // Inject startup bubbles
+    const startScreen = document.getElementById('start-screen');
+    for (let i = 0; i < 15; i++) {
+        const b = document.createElement('div');
+        b.className = 'splash-bubble';
+        const size = 20 + Math.random() * 60;
+        b.style.width = size + 'px';
+        b.style.height = size + 'px';
+        b.style.left = Math.random() * 100 + '%';
+        b.style.setProperty('--d', (4 + Math.random() * 6) + 's');
+        b.style.setProperty('--x', (Math.random() * 200 - 100) + 'px');
+        b.style.animationDelay = Math.random() * 5 + 's';
+        startScreen.appendChild(b);
+    }
+
+    let gold = 500;
+    let inventory = [
+        { id: 'start-e', type: 'sub', subType: 'steam', lvl: 1, icon: '🚢', color: '#ff4d6d', equipped: true },
+        { id: 'start-c', type: 'coach', subType: 'std', lvl: 1, icon: '🛥️', color: '#00b4d8', equipped: true },
+        { id: 'start-t', type: 'tail', subType: 'base', lvl: 1, icon: '🏗️', color: '#ffb703', equipped: true }
+    ];
+    let user = null;
+    let state = 'START';
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-
-    const FLAT_PRICE = 500;
-    const MAX_ACTIVE_COACHES = 10;
-    const SHOP_DATA = [
-        { id: 'm_coach_standard', name: "Wooden Coach", price: FLAT_PRICE, icon: '🚃', desc: "Holds 6+ people", color: '#0077b6' },
-        { id: 'm_coach_ruby', name: "Ruby Coach", price: 1200, icon: '🔻', desc: "Wealthy passengers", color: '#9b2226' },
-        { id: 'm_coach_vend', name: "Vending Car", price: 2000, icon: '🥤', desc: "Passive gold gen", color: '#06d6a0' },
-        { id: 'm_sub_steam', name: "Steam Engine", price: 2500, icon: '🚂', desc: "Basic power", color: '#9e2a2b' },
-        { id: 'm_sub_bullet', name: "Steel Engine", price: 6000, icon: '🚄', desc: "High velocity!", color: '#4a4e69' },
-        { id: 'm_tail_basic', name: "Brake Van", price: FLAT_PRICE, icon: '🏠', desc: "End car", color: '#e09f3e' }
-    ];
-
-    // MONEY RESET FOR DEPLOYMENT
-    let gold = 0; 
+    let w, h;
     let worldX = 0;
     let trainY = 0, targetY = 0;
-    let state = 'START';
-    let w, h;
-
-    // Initial Inventory
-    let inventory = [
-        { id: Math.random(), type: 'sub', subType: 'steam', lvl: 1, icon: '🚂', color: '#9e2a2b', equipped: true },
-        { id: Math.random(), type: 'coach', subType: 'standard', lvl: 1, icon: '🚃', color: '#0077b6', equipped: true },
-        { id: Math.random(), type: 'tail', subType: 'basic', lvl: 1, icon: '🏠', color: '#e09f3e', equipped: true }
-    ];
+    let stations = [];
+    let speedLines = [];
+    let bubbles = [];
+    let activeSub = null, activeTail = null, activeCoaches = [];
     let selectedId = null;
 
-    let activeEngine = null;
-    let activeTail = null;
-    let activeCoaches = [];
+    const SHOP_DATA = {
+        sub: [
+            { id: 's_sub', name: 'Fast Engine', cost: 1000, subType: 'steam', icon: '🚢', color: '#ff4d6d', desc: 'Zoooom!' },
+            { id: 's_nuclear', name: 'Super Reactor', cost: 5000, subType: 'nuke', icon: '⚛️', color: '#72efdd', desc: 'Crazy Fast!' }
+        ],
+        coach: [
+            { id: 's_std', name: 'Blue Car', cost: 200, subType: 'std', icon: '🛥️', color: '#00b4d8', desc: 'Carries Friends' },
+            { id: 's_vending', name: 'Snack Car', cost: 800, subType: 'vending', icon: '🥤', color: '#ff758f', desc: 'Makes 💰 while moving' },
+            { id: 's_luxury', name: 'Shiny Car', cost: 2500, subType: 'lux', icon: '💎', color: '#ffb703', desc: 'Fancy Friends!' }
+        ],
+        tail: [
+            { id: 's_tail', name: 'Tail Fin', cost: 300, subType: 'base', icon: '🏗️', color: '#ffb703', desc: 'Keeps it steady' },
+            { id: 's_heavy', name: 'Super Tail', cost: 1200, subType: 'turbo', icon: '⚙️', color: '#590d22', desc: 'Looks so cool!' }
+        ]
+    };
 
-    let stations = [];
-    let bubbles = Array.from({length: 40}, () => ({ x: Math.random()*2000, y: Math.random()*1000, r: Math.random()*3+1, s: Math.random()*2+1 }));
-    let floatingTexts = [];
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg;
-        t.style.opacity = '1';
-        setTimeout(() => t.style.opacity = '0', 1500);
+    async function saveGame() {
+        if (!user) return;
+        const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'save', 'data');
+        await setDoc(ref, { gold, inventory: JSON.stringify(inventory), ts: Date.now() });
     }
 
-    function startGame() {
-        document.getElementById('start-screen').style.display = 'none';
+    async function loadGame() {
+        const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'save', 'data');
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+            const d = snap.data();
+            gold = d.gold || 500;
+            inventory = JSON.parse(d.inventory);
+            rebuildTrain();
+            updateUI();
+        }
+    }
+
+    (async () => {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            await signInAnonymously(auth);
+        }
+    })();
+
+    onAuthStateChanged(auth, u => {
+        if (u) {
+            user = u;
+            loadGame().then(() => {
+                const b = document.getElementById('start-btn');
+                b.innerText = "PLAY NOW!";
+                b.onclick = () => {
+                    startScreen.style.opacity = '0';
+                    startScreen.style.transition = 'opacity 0.5s';
+                    setTimeout(() => startScreen.style.display = 'none', 500);
+                    state = 'PLAY';
+                };
+            });
+        }
+    });
+
+    function updateUI() {
+        document.getElementById('gold-val').innerText = Math.floor(gold);
+        const pCount = activeCoaches.reduce((a, b) => a + (b.passengers || 0), 0);
+        const maxP = activeCoaches.filter(c => c.subType !== 'vending').length * 6;
+        document.getElementById('pass-val').innerText = pCount;
+        document.getElementById('max-pass-val').innerText = maxP;
+        document.getElementById('train-len').innerText = activeCoaches.length;
+    }
+
+    function rebuildTrain() {
+        activeSub = inventory.find(i => i.type === 'sub' && i.equipped) || inventory.find(i => i.type === 'sub') || null;
+        activeTail = inventory.find(i => i.type === 'tail' && i.equipped) || inventory.find(i => i.type === 'tail') || null;
+        activeCoaches = inventory.filter(i => i.type === 'coach' && i.equipped).map(c => ({
+            ...c, 
+            passengers: 0, 
+            vendingProgress: 0 
+        }));
+        updateUI();
+    }
+
+    window.openShop = () => {
+        state = 'PAUSE';
+        const list = document.getElementById('shop-list');
+        list.innerHTML = '';
+        
+        ['sub', 'coach', 'tail'].forEach(cat => {
+            const title = cat === 'sub' ? 'Better Engines' : cat === 'coach' ? 'Cooler Cars' : 'Stronger Tails';
+            list.innerHTML += `<div class="shop-section-title">${title}</div>`;
+            SHOP_DATA[cat].forEach(item => {
+                const canAfford = gold >= item.cost;
+                list.innerHTML += `
+                    <div class="item-row">
+                        <div style="font-size: 30px; margin-right: 15px;">${item.icon}</div>
+                        <div style="flex:1"><b>${item.name}</b><br><small style="opacity:0.8">${item.desc}</small></div>
+                        <button onclick="buy('${cat}', '${item.id}')" ${!canAfford?'disabled':''} 
+                                style="background:${canAfford?'#ffb703':'#888'}; border:none; padding:10px 15px; border-radius:12px; font-weight:bold; min-width:90px; border-bottom: 4px solid ${canAfford?'#e6a700':'#444'};">
+                            💰${item.cost}
+                        </button>
+                    </div>
+                `;
+            });
+        });
+        document.getElementById('shop-modal').style.display = 'flex';
+    };
+
+    window.buy = (cat, id) => {
+        const item = SHOP_DATA[cat].find(i => i.id === id);
+        if (gold >= item.cost) {
+            gold -= item.cost;
+            inventory.push({ 
+                id: Math.random().toString(36).substr(2, 9), 
+                type: cat, 
+                subType: item.subType, 
+                lvl: 1, 
+                icon: item.icon, 
+                color: item.color, 
+                equipped: false 
+            });
+            
+            const notify = document.getElementById('buy-notification');
+            notify.style.display = 'block';
+            setTimeout(() => notify.style.display = 'none', 1000);
+            
+            saveGame(); updateUI(); openShop();
+        }
+    };
+
+    window.openMerge = () => {
+        state = 'PAUSE'; selectedId = null;
+        renderYard();
+        document.getElementById('merge-modal').style.display = 'flex';
+    };
+
+    function renderYard() {
+        const renderGrid = (gid, type) => {
+            const g = document.getElementById(gid); g.innerHTML = '';
+            const items = inventory.filter(i => i.type === type);
+            items.forEach(item => {
+                const d = document.createElement('div');
+                d.className = `slot filled ${selectedId === item.id ? 'selected' : ''}`;
+                d.onclick = () => selectItem(item.id);
+                d.innerHTML = `${item.icon}<span class="lvl-tag">L${item.lvl}</span><div class="status-dot ${item.equipped?'on':''}"></div>`;
+                g.appendChild(d);
+            });
+            for(let i=items.length; i<4; i++) {
+                const d = document.createElement('div'); d.className = 'slot'; g.appendChild(d);
+            }
+        };
+        renderGrid('engine-grid', 'sub');
+        renderGrid('coach-grid', 'coach');
+        renderGrid('tail-grid', 'tail');
+        
+        const controls = document.getElementById('yard-controls');
+        if (selectedId) {
+            controls.style.display = 'flex';
+            const item = inventory.find(i => i.id === selectedId);
+            document.getElementById('toggle-btn').innerText = item.equipped ? "PUT AWAY" : "USE IT!";
+        } else { controls.style.display = 'none'; }
+    }
+
+    function selectItem(id) {
+        if (selectedId === id) { selectedId = null; }
+        else if (selectedId) {
+            const a = inventory.find(i => i.id === selectedId);
+            const b = inventory.find(i => i.id === id);
+            if (a && b && a.type === b.type && a.subType === b.subType && a.lvl === b.lvl && a.id !== b.id) {
+                b.lvl++;
+                inventory = inventory.filter(i => i.id !== selectedId);
+                selectedId = null;
+                rebuildTrain();
+            } else { selectedId = id; }
+        } else { selectedId = id; }
+        renderYard();
+    }
+
+    window.toggleEquip = () => {
+        const item = inventory.find(i => i.id === selectedId);
+        if (item.equipped) { item.equipped = false; }
+        else {
+            if (item.type === 'sub' || item.type === 'tail') {
+                inventory.filter(i => i.type === item.type).forEach(i => i.equipped = false);
+            }
+            if (item.type === 'coach' && inventory.filter(i => i.type === 'coach' && i.equipped).length >= 12) return;
+            item.equipped = true;
+        }
+        rebuildTrain(); renderYard(); saveGame();
+    };
+
+    window.scrapItem = () => {
+        inventory = inventory.filter(i => i.id !== selectedId);
+        selectedId = null; rebuildTrain(); renderYard(); saveGame();
+    };
+
+    window.closeModals = () => {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         state = 'PLAY';
-    }
+    };
 
     function resize() {
         w = canvas.width = window.innerWidth;
         h = canvas.height = window.innerHeight;
-        if(trainY === 0) trainY = targetY = h / 2;
+        trainY = targetY = h / 2;
+        bubbles = Array.from({length: 30}, () => ({x: Math.random()*w, y: Math.random()*h, r: Math.random()*6, s: Math.random()*2+1}));
+        speedLines = Array.from({length: 15}, () => ({x: Math.random()*w, y: Math.random()*h, l: 30 + Math.random()*50, s: 10 + Math.random()*15}));
     }
 
-    function updateUI() {
-        document.getElementById('gold-val').innerText = Math.floor(gold);
-        const passSum = activeCoaches.reduce((a,b) => a + (b.pass||0), 0);
-        document.getElementById('pass-val').innerText = passSum;
-        document.getElementById('train-len').innerText = activeCoaches.length;
-    }
-
-    function closeModals() {
-        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        state = 'PLAY';
-    }
-
-    function openShop() {
-        state = 'PAUSE';
-        const list = document.getElementById('shop-list');
-        list.innerHTML = '';
-        SHOP_DATA.forEach(item => {
-            const canAfford = gold >= item.price;
-            list.innerHTML += `
-                <div class="item-row">
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <span style="font-size:24px;">${item.icon}</span>
-                        <div style="color:white;"><b>${item.name}</b><br><small style="opacity:0.7">${item.desc}</small></div>
-                    </div>
-                    <button onclick="buyItem('${item.id}', ${item.price})" 
-                            style="background:${canAfford?'var(--gold)':'#555'}; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer;"
-                            ${!canAfford?'disabled':''}>💰${item.price}</button>
-                </div>
-            `;
-        });
-        document.getElementById('shop-modal').style.display = 'flex';
-    }
-
-    function buyItem(id, price) {
-        if (gold < price) return;
-        gold -= price;
-        const base = SHOP_DATA.find(i => i.id === id);
-        const parts = id.split('_');
-        inventory.push({ 
-            id: Math.random(),
-            type: parts[1], 
-            subType: parts[2], 
-            lvl: 1, 
-            icon: base.icon, 
-            color: base.color,
-            equipped: false 
-        });
-        showToast("PURCHASED!");
-        updateUI();
-        openShop();
-    }
-
-    function openMerge() {
-        state = 'PAUSE';
-        selectedId = null;
-        renderYard();
-        document.getElementById('merge-modal').style.display = 'flex';
-    }
-
-    function renderYard() {
-        const engineGrid = document.getElementById('engine-grid');
-        const cabooseGrid = document.getElementById('caboose-grid');
-        const coachGrid = document.getElementById('coach-grid');
-
-        const engines = inventory.filter(i => i.type === 'sub');
-        const cabooses = inventory.filter(i => i.type === 'tail');
-        const coaches = inventory.filter(i => i.type === 'coach');
-
-        const drawGrid = (el, items, slots) => {
-            el.innerHTML = '';
-            const total = Math.max(items.length, slots);
-            for (let i = 0; i < total; i++) {
-                const item = items[i];
-                const isSelected = item && selectedId === item.id;
-                el.innerHTML += `
-                    <div class="slot ${item ? 'filled' : ''} ${isSelected ? 'selected' : ''}" 
-                         onclick="handleYardClick('${item ? item.id : 'none'}')">
-                        ${item ? item.icon : ''}
-                        ${item ? `<span class="lvl-tag">L${item.lvl}</span>` : ''}
-                        ${item ? `<div class="status-dot ${item.equipped ? 'on' : ''}"></div>` : ''}
-                    </div>
-                `;
-            }
-        };
-
-        drawGrid(engineGrid, engines, 5);
-        drawGrid(cabooseGrid, cabooses, 5);
-        drawGrid(coachGrid, coaches, 10);
-
-        document.getElementById('yard-controls').style.display = selectedId !== null ? 'block' : 'none';
-        const item = inventory.find(i => i.id === selectedId);
-        if (item) {
-            document.getElementById('toggle-btn').innerText = item.equipped ? "UNEQUIP" : "EQUIP";
-        }
-    }
-
-    function handleYardClick(idString) {
-        if (idString === 'none') {
-            selectedId = null;
-            renderYard();
-            return;
-        }
-
-        const idNum = parseFloat(idString);
-
-        if (selectedId === null) {
-            selectedId = idNum;
-        } else if (selectedId === idNum) {
-            selectedId = null;
-        } else {
-            const aIdx = inventory.findIndex(i => i.id === selectedId);
-            const bIdx = inventory.findIndex(i => i.id === idNum);
-            
-            if (aIdx === -1 || bIdx === -1) {
-                 selectedId = idNum;
-                 renderYard();
-                 return;
-            }
-
-            const a = inventory[aIdx];
-            const b = inventory[bIdx];
-
-            // MERGE ATTEMPT
-            if (a.type === b.type && a.subType === b.subType && a.lvl === b.lvl) {
-                const shouldBeEquipped = a.equipped || b.equipped;
-                
-                inventory[bIdx].lvl++;
-                inventory[bIdx].equipped = shouldBeEquipped;
-                inventory.splice(aIdx, 1);
-                
-                selectedId = null;
-                showToast("MERGED! LEVEL UP!");
-                rebuildTrain();
-            } else {
-                selectedId = idNum;
-            }
-        }
-        renderYard();
-    }
-
-    function toggleEquip() {
-        if (selectedId === null) return;
-        const item = inventory.find(i => i.id === selectedId);
-        if (!item) return;
-        
-        if (item.equipped) {
-            const activeEngines = inventory.filter(i => i.type === 'sub' && i.equipped);
-            const activeTails = inventory.filter(i => i.type === 'tail' && i.equipped);
-            if (item.type === 'sub' && activeEngines.length <= 1) {
-                showToast("NEED AT LEAST 1 ENGINE!");
-                return;
-            }
-            if (item.type === 'tail' && activeTails.length <= 1) {
-                showToast("NEED AT LEAST 1 CABOOSE!");
-                return;
-            }
-            item.equipped = false;
-            showToast("UNEQUIPPED");
-        } else {
-            if (item.type === 'sub') {
-                inventory.filter(i => i.type === 'sub').forEach(i => i.equipped = false);
-                item.equipped = true;
-                showToast("ENGINE EQUIPPED");
-            } else if (item.type === 'tail') {
-                inventory.filter(i => i.type === 'tail').forEach(i => i.equipped = false);
-                item.equipped = true;
-                showToast("CABOOSE EQUIPPED");
-            } else if (item.type === 'coach') {
-                const activeCoachesCount = inventory.filter(i => i.type === 'coach' && i.equipped).length;
-                if (activeCoachesCount < MAX_ACTIVE_COACHES) {
-                    item.equipped = true;
-                    showToast("COACH EQUIPPED");
-                } else {
-                    showToast("TRAIN IS FULL! (MAX 10)");
-                }
-            }
-        }
-        rebuildTrain();
-        renderYard();
-    }
-
-    function scrapItem() {
-        if (selectedId === null) return;
-        const idx = inventory.findIndex(i => i.id === selectedId);
-        const item = inventory[idx];
-        const activeEngines = inventory.filter(i => i.type === 'sub' && i.equipped);
-        const activeTails = inventory.filter(i => i.type === 'tail' && i.equipped);
-        
-        if (item.equipped && item.type === 'sub' && activeEngines.length <= 1) return;
-        if (item.equipped && item.type === 'tail' && activeTails.length <= 1) return;
-
-        inventory.splice(idx, 1);
-        selectedId = null;
-        showToast("SCRAPPED ITEM");
-        rebuildTrain();
-        renderYard();
-    }
-
-    function rebuildTrain() {
-        const engine = inventory.find(i => i.type === 'sub' && i.equipped);
-        const tail = inventory.find(i => i.type === 'tail' && i.equipped);
-        const coaches = inventory.filter(i => i.type === 'coach' && i.equipped);
-
-        activeEngine = engine ? {...engine} : { type:'sub', subType:'steam', lvl: 1, color: '#9e2a2b' };
-        activeTail = tail ? {...tail} : { type:'tail', subType:'basic', lvl: 1, color: '#e09f3e' };
-        
-        const oldCoaches = [...activeCoaches];
-        activeCoaches = coaches.slice(0, 10).map((c) => {
-            const match = oldCoaches.find(oc => oc.id === c.id);
-            return { ...c, pass: match ? match.pass : 0, stock: match ? match.stock : 0 };
-        });
-        updateUI();
-    }
-
-    function getCap(c) {
-        let base = c.lvl * 6;
-        if (c.subType === 'ruby') base = c.lvl * 8;
-        return base;
-    }
-
-    function spawnStation() {
-        stations.push({ 
-            x: worldX + w + 100, 
-            y: 150 + Math.random()*(h-300), 
-            type: Math.random() > 0.4 ? 'STATION' : 'HUB', 
-            col: false 
-        });
-    }
-
-    canvas.addEventListener('pointerdown', e => {
-        if (state !== 'PLAY') return;
-        targetY = e.clientY;
-
-        // Vending Machine Collection
-        let trainFullWidth = 150 + (activeCoaches.length * 85) + 60;
-        let startX = (w / 2) - (trainFullWidth / 2);
-        let currentXPos = startX + 50; 
-
-        for (let i = 0; i < activeCoaches.length; i++) {
-            const c = activeCoaches[i];
-            currentXPos += 85; 
-            if (c.subType === 'vend') {
-                const dist = Math.hypot(e.clientX - currentXPos, e.clientY - trainY);
-                if (dist < 45 && c.stock >= 100) {
-                    const gain = 75 * c.lvl;
-                    gold += gain;
-                    c.stock = 0;
-                    floatingTexts.push({ x: e.clientX, y: e.clientY, text: `+$${gain}`, life: 1 });
-                    updateUI();
-                }
-            }
-        }
-    });
+    canvas.addEventListener('pointerdown', e => { if (state === 'PLAY') targetY = e.clientY; });
+    canvas.addEventListener('pointermove', e => { if (state === 'PLAY') targetY = e.clientY; });
 
     function update() {
-        if (state !== 'PLAY') return;
-        const baseSpeed = activeEngine.subType === 'bullet' ? 7.5 : 4.5;
-        const speed = baseSpeed + (activeEngine.lvl * 0.4);
+        if (state !== 'PLAY' || !activeSub) return;
+
+        const subLvl = activeSub.lvl || 1;
+        const speed = 5 + (subLvl * 0.8);
         worldX += speed;
         trainY += (targetY - trainY) * 0.08;
 
-        if (Math.random() < 0.012) spawnStation();
+        // Vending
+        activeCoaches.forEach(c => {
+            if (c.subType === 'vending') {
+                const fillRate = 0.005 + (c.lvl * 0.004);
+                c.vendingProgress += fillRate;
+                if (c.vendingProgress >= 1) {
+                    c.vendingProgress = 0;
+                    gold += 10 * c.lvl;
+                    updateUI();
+                }
+            }
+        });
 
-        let trainFullWidth = 150 + (activeCoaches.length * 85) + 60;
-        let startX = (w / 2) - (trainFullWidth / 2);
-        let engineVisualX = startX + (activeCoaches.length * 85) + 100;
-        let engineWorldX = worldX + engineVisualX;
+        const passCars = activeCoaches.filter(c => c.subType !== 'vending');
+        const pCount = passCars.reduce((a, b) => a + (b.passengers || 0), 0);
+        const maxP = passCars.length * 6;
+        const spawnChance = pCount > (maxP * 0.75) ? 0.01 : 0.03;
+
+        if (Math.random() < spawnChance) {
+            stations.push({
+                x: worldX + w + 100,
+                y: 100 + Math.random()*(h-200),
+                type: pCount > (maxP * 0.6) ? 'HUB' : 'STATION',
+                hit: false
+            });
+        }
+
+        const trainW = 100 + (activeCoaches.length * 80);
+        const tx = (w/2) - (trainW/2);
 
         stations.forEach(s => {
-            if (!s.col && Math.abs(s.x - engineWorldX) < 90 && Math.abs(s.y - trainY) < 100) {
-                s.col = true;
+            const sx = s.x - worldX;
+            if (!s.hit && sx > tx && sx < tx + trainW && Math.abs(s.y - trainY) < 60) {
+                s.hit = true;
                 if (s.type === 'STATION') {
-                    activeCoaches.forEach(c => {
-                        let space = getCap(c) - (c.pass || 0);
-                        if (space > 0) {
-                            let gain = Math.min(space, 1 + Math.floor(Math.random() * 3));
-                            c.pass = (c.pass || 0) + gain;
-                        }
+                    passCars.forEach(c => { if(c.passengers < 6) c.passengers++; });
+                } else {
+                    passCars.forEach(c => {
+                        const multiplier = c.subType === 'lux' ? 2 : 1;
+                        gold += (c.passengers * 60) * multiplier;
+                        c.passengers = 0;
                     });
-                } else if (s.type === 'HUB') {
-                    activeCoaches.forEach(c => {
-                        let mult = c.subType === 'ruby' ? 2.5 : 1;
-                        gold += (c.pass || 0) * (100 + (c.lvl * 25)) * mult;
-                        c.pass = 0;
-                    });
+                    saveGame();
                 }
                 updateUI();
             }
         });
 
-        activeCoaches.forEach(c => {
-            if (c.subType === 'vend') {
-                if ((c.pass || 0) > 0 && c.stock < 100) {
-                    c.stock += (0.025 + (c.lvl * 0.01));
-                    if (c.stock > 100) c.stock = 100;
-                }
-            }
+        stations = stations.filter(s => s.x > worldX - 500);
+        speedLines.forEach(l => {
+            l.x -= l.s;
+            if (l.x < -100) { l.x = w + 100; l.y = Math.random()*h; }
         });
-
-        stations = stations.filter(s => s.x > worldX - 1000);
-        floatingTexts.forEach(t => t.life -= 0.02);
-        floatingTexts = floatingTexts.filter(t => t.life > 0);
+        bubbles.forEach(b => {
+            b.y -= b.s;
+            if (b.y < -20) b.y = h + 20;
+        });
     }
 
-    function drawTrainPart(x, y, type, lvl, pCount = 0, color, subType, stock = 0) {
+    function drawPart(x, y, part, pass = 0, progress = 0) {
+        if (!part) return;
         ctx.save();
         ctx.translate(x, y);
-        ctx.lineWidth = 3; ctx.strokeStyle = "white";
+        ctx.fillStyle = part.color;
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 4;
 
-        if (type === 'sub') {
-            ctx.fillStyle = color;
-            if (subType === 'bullet') {
-                ctx.beginPath(); ctx.moveTo(0, -25); ctx.lineTo(80, -25); 
-                ctx.quadraticCurveTo(110, 0, 80, 25); ctx.lineTo(0, 25); ctx.closePath();
-                ctx.fill(); ctx.stroke();
+        const lvl = part.lvl || 1;
+
+        if (part.type === 'sub') {
+            ctx.beginPath();
+            ctx.ellipse(30, 0, 50, 30, 0, 0, Math.PI*2);
+            ctx.fill(); ctx.stroke();
+            // Fin
+            ctx.beginPath(); ctx.moveTo(10, -25); ctx.lineTo(-10, -45); ctx.lineTo(-10, -25); ctx.closePath(); ctx.fill(); ctx.stroke();
+            // Detail
+            ctx.fillStyle = "rgba(255,255,255,0.4)";
+            ctx.beginPath(); ctx.arc(45, -5, 10, 0, 7); ctx.fill();
+        } else if (part.type === 'coach') {
+            ctx.beginPath();
+            ctx.roundRect(-35, -25, 70, 50, 15);
+            ctx.fill(); ctx.stroke();
+            
+            if (part.subType === 'vending') {
+                ctx.fillStyle = "rgba(0,0,0,0.3)";
+                ctx.fillRect(-20, -5, 40, 12);
+                ctx.fillStyle = "#ffeb3b";
+                ctx.fillRect(-20, -5, 40 * progress, 12);
+                ctx.font = "18px Arial";
+                ctx.fillText("🥤", -10, 25);
             } else {
-                ctx.beginPath(); ctx.roundRect(0, -30, 100, 60, [0, 15, 15, 0]); ctx.fill(); ctx.stroke();
-                ctx.fillStyle = "#333"; ctx.fillRect(70, -45, 15, 20);
-            }
-        } else if (type === 'coach') {
-            ctx.fillStyle = color;
-            ctx.beginPath(); ctx.roundRect(-40, -25, 80, 50, 8); ctx.fill(); ctx.stroke();
-            if (subType === 'ruby') {
-                ctx.fillStyle = "#ff0000"; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(8, -14); ctx.lineTo(0, -6); ctx.lineTo(-8, -14); ctx.fill();
-            } else if (subType === 'vend') {
-                ctx.fillStyle = "#ffb703"; ctx.fillRect(-15, -15, 30, 30);
-                ctx.fillStyle = "black"; ctx.font = "14px Arial"; ctx.textAlign = "center"; ctx.fillText("🥤", 0, 5);
-                ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-20, 28, 40, 6);
-                ctx.fillStyle = stock >= 100 ? "#ffb703" : "#00f5d4"; ctx.fillRect(-20, 28, 40 * (stock/100), 6);
-            }
-            const capacity = getCap({lvl, subType});
-            const visualCap = Math.min(capacity, 12);
-            const cols = 3; const rows = Math.ceil(visualCap / cols);
-            for(let i=0; i<visualCap; i++) {
-                ctx.fillStyle = "rgba(255,255,255,0.4)";
-                const r = i % rows; const c = Math.floor(i / rows);
-                const wx = -30 + (c * 24); const wy = -18 + (r * 12);
-                ctx.beginPath(); ctx.roundRect(wx, wy, 8, 8, 2); ctx.fill();
-                if (i < pCount) { ctx.fillStyle="#111"; ctx.font="8px Arial"; ctx.textAlign = "center"; ctx.fillText("👤", wx + 4, wy + 7); }
+                for(let i=0; i<6; i++) {
+                    ctx.fillStyle = i < pass ? "#ffeb3b" : "rgba(0,0,0,0.2)";
+                    const row = i < 3 ? -8 : 8;
+                    const col = (i % 3) * 18 - 18;
+                    ctx.beginPath(); ctx.arc(col, row, 6, 0, 7); ctx.fill();
+                }
             }
         } else {
-            ctx.fillStyle = color;
-            ctx.beginPath(); ctx.roundRect(-50, -30, 90, 60, [10, 0, 0, 10]); ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(35, -25);
+            ctx.lineTo(-10, -25);
+            ctx.quadraticCurveTo(-45, 0, -10, 25);
+            ctx.lineTo(35, 25);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            
+            ctx.fillStyle = "white";
+            for(let i=0; i<lvl; i++) {
+                const spread = 40;
+                const step = spread / (lvl === 1 ? 1 : lvl - 1);
+                const py = lvl === 1 ? 0 : -20 + (i * step);
+                ctx.beginPath();
+                ctx.moveTo(-45, py);
+                ctx.lineTo(-30, py - 8);
+                ctx.lineTo(-30, py + 8);
+                ctx.closePath();
+                ctx.fill();
+            }
         }
         ctx.restore();
     }
 
     function draw() {
         ctx.clearRect(0, 0, w, h);
+
+        speedLines.forEach(l => {
+            ctx.strokeStyle = "rgba(255,255,255,0.2)";
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(l.x + l.l, l.y); ctx.stroke();
+        });
+
         bubbles.forEach(b => {
             ctx.fillStyle = "rgba(255,255,255,0.15)";
-            b.y -= b.s; if (b.y < -20) b.y = h + 20;
             ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill();
         });
 
-        if (state === 'START') return;
+        if (state === 'START' || !activeSub) return;
 
         ctx.save(); ctx.translate(-worldX, 0);
         stations.forEach(s => {
-            ctx.fillStyle = s.type === 'HUB' ? "#ef476f" : "#ffb703";
-            ctx.beginPath(); ctx.roundRect(s.x, s.y - 60, 110, 110, 15); ctx.fill();
-            ctx.fillStyle = "white"; ctx.font = "bold 14px sans-serif"; ctx.textAlign="center";
-            ctx.fillText(s.type === 'HUB' ? 'GRAND HUB' : 'STATION', s.x + 55, s.y + 15);
-            ctx.font = "34px Arial"; ctx.fillText(s.type === 'HUB' ? '🏦' : '🚉', s.x + 55, s.y - 10);
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = s.type === 'HUB' ? '#ff477e' : '#ffeb3b';
+            ctx.fillStyle = s.type === 'HUB' ? '#ff477e' : '#ffeb3b';
+            ctx.beginPath(); ctx.roundRect(s.x, s.y - 40, 80, 80, 20); ctx.fill();
+            ctx.strokeStyle = "white"; ctx.lineWidth = 4; ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = s.type === 'HUB' ? "white" : "#333"; 
+            ctx.font = "bold 14px sans-serif"; ctx.textAlign="center";
+            ctx.fillText(s.type === 'HUB' ? "DROP OFF" : "FRIENDS!", s.x+40, s.y+5);
         });
         ctx.restore();
 
-        let trainFullWidth = 150 + (activeCoaches.length * 85) + 60;
-        let startX = (w / 2) - (trainFullWidth / 2);
-        let curX = startX + 50; 
-        drawTrainPart(curX, trainY, 'tail', activeTail.lvl, 0, activeTail.color, activeTail.subType);
-        activeCoaches.forEach(c => {
-            ctx.strokeStyle = "#222"; ctx.lineWidth = 6;
-            ctx.beginPath(); ctx.moveTo(curX + 40, trainY); ctx.lineTo(curX + 60, trainY); ctx.stroke();
-            curX += 85; drawTrainPart(curX, trainY, 'coach', c.lvl, c.pass, c.color, c.subType, c.stock);
-        });
-        ctx.strokeStyle = "#222"; ctx.lineWidth = 6;
-        ctx.beginPath(); ctx.moveTo(curX + 40, trainY); ctx.lineTo(curX + 60, trainY); ctx.stroke();
-        curX += 60; drawTrainPart(curX, trainY, 'sub', activeEngine.lvl, 0, activeEngine.color, activeEngine.subType);
+        const trainW = 100 + (activeCoaches.length * 80);
+        let cx = (w/2) - (trainW/2) + 20;
 
-        floatingTexts.forEach(t => {
-            ctx.fillStyle = `rgba(255, 255, 255, ${t.life})`;
-            ctx.font = "bold 22px sans-serif"; ctx.fillText(t.text, t.x, t.y - (1 - t.life) * 60);
+        if (activeTail) drawPart(cx, trainY, activeTail);
+        activeCoaches.forEach(c => {
+            cx += 80;
+            ctx.strokeStyle = "white"; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(cx-45, trainY); ctx.lineTo(cx-35, trainY); ctx.stroke();
+            drawPart(cx, trainY, c, c.passengers || 0, c.vendingProgress || 0);
         });
+        cx += 75;
+        ctx.strokeStyle = "white"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(cx-40, trainY); ctx.lineTo(cx-20, trainY); ctx.stroke();
+        drawPart(cx, trainY, activeSub);
     }
 
-    function frame() { update(); draw(); requestAnimationFrame(frame); }
+    function loop() { 
+        update(); 
+        draw(); 
+        requestAnimationFrame(loop); 
+    }
+    
     window.addEventListener('resize', resize);
-    resize(); rebuildTrain(); frame();
+    resize();
+    rebuildTrain();
+    loop();
 </script>
 </body>
 </html>
-
-```
