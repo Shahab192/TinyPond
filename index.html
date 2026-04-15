@@ -237,27 +237,26 @@
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // --- CONFIGURATION START ---
-    // If you're deploying this yourself, replace this object with your own 
-    // project settings from the Firebase Console (Project Settings > General > Your Apps)
+    // --- FIREBASE CONFIGURATION ---
     let firebaseConfig;
-    try {
-        firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-    } catch (e) {
-        // FALLBACK: Put your keys here if deploying to Vercel/Github!
+    
+    // First try to get the internal environment config (if running here)
+    if (typeof __firebase_config !== 'undefined') {
+        firebaseConfig = JSON.parse(__firebase_config);
+    } else {
+        // Fallback to your provided project credentials for Vercel/GitHub
         firebaseConfig = {
-  apiKey: "AIzaSyAYLSmv5jpBhyMmhEPgHVMvbQCR08MEDCM",
-  authDomain: "talha-s-games.firebaseapp.com",
-  projectId: "talha-s-games",
-  storageBucket: "talha-s-games.firebasestorage.app",
-  messagingSenderId: "567212264305",
-  appId: "1:567212264305:web:e0da6138fc2dcad79204d0",
-  measurementId: "G-GT2ZVH7DCB"
+            apiKey: "AIzaSyAYLSmv5jpBhyMmhEPgHVMvbQCR08MEDCM",
+            authDomain: "talha-s-games.firebaseapp.com",
+            projectId: "talha-s-games",
+            storageBucket: "talha-s-games.firebasestorage.app",
+            messagingSenderId: "567212264305",
+            appId: "1:567212264305:web:e0da6138fc2dcad79204d0",
+            measurementId: "G-GT2ZVH7DCB"
         };
     }
     
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'sub-train-custom-v1';
-    // --- CONFIGURATION END ---
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'submarine-train-prod';
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -307,19 +306,24 @@
         ]
     };
 
+    // Firebase Path helper
+    const getSavePath = (uid) => doc(db, 'artifacts', appId, 'users', uid, 'save', 'data');
+
     async function saveGame() {
-        if (!user || !firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") return;
+        if (!user) return;
         try {
-            const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'save', 'data');
-            await setDoc(ref, { gold, inventory: JSON.stringify(inventory), ts: Date.now() });
-        } catch(e) { console.error("Save failed - Check Firebase rules", e); }
+            await setDoc(getSavePath(user.uid), { 
+                gold, 
+                inventory: JSON.stringify(inventory), 
+                updatedAt: Date.now() 
+            });
+        } catch(e) { console.error("Cloud save failed:", e); }
     }
 
     async function loadGame() {
-        if (!user || !firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") return;
+        if (!user) return;
         try {
-            const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'save', 'data');
-            const snap = await getDoc(ref);
+            const snap = await getDoc(getSavePath(user.uid));
             if (snap.exists()) {
                 const d = snap.data();
                 gold = d.gold || 500;
@@ -327,7 +331,7 @@
                 rebuildTrain();
                 updateUI();
             }
-        } catch(e) { console.error("Load failed", e); }
+        } catch(e) { console.error("Cloud load failed:", e); }
     }
 
     const initAuth = async () => {
@@ -338,18 +342,16 @@
                 await signInAnonymously(auth);
             }
         } catch (e) {
-            console.warn("Auth failed or project not configured. Playing in offline mode.");
-            // Allow playing even if Firebase isn't configured for Vercel demo
-            const b = document.getElementById('start-btn');
-            b.innerText = "PLAY OFFLINE";
-            b.onclick = () => { startScreen.style.display = 'none'; state = 'PLAY'; };
+            console.error("Auth error:", e);
+            const btn = document.getElementById('start-btn');
+            btn.innerText = "PLAY OFFLINE";
+            btn.onclick = () => { startScreen.style.display = 'none'; state = 'PLAY'; };
         }
     };
-    initAuth();
 
     onAuthStateChanged(auth, u => {
-        if (u) {
-            user = u;
+        user = u;
+        if (user) {
             loadGame().then(() => {
                 const b = document.getElementById('start-btn');
                 b.innerText = "PLAY NOW!";
@@ -357,6 +359,8 @@
             });
         }
     });
+
+    initAuth();
 
     function updateUI() {
         document.getElementById('gold-val').innerText = Math.floor(gold);
@@ -376,7 +380,6 @@
         updateUI();
     }
 
-    // Modal Logic
     window.openShop = () => {
         state = 'PAUSE';
         const list = document.getElementById('shop-list');
